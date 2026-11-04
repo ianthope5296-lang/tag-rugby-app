@@ -245,7 +245,7 @@ td select{min-height:40px}
   <section class="view" id="v-home">
     <div class="home">
       <button class="tile main" type="button" id="goTeams"><span class="big">チームで つかう</span><span class="sub">さくせんボード・アニメ・どうがを とる・ふりかえり</span></button>
-      <button class="tile" type="button" disabled><span class="big">学習カード</span><span class="sub">試作4で つくります</span></button>
+      <button class="tile" type="button" disabled><span class="big">学習カード</span><span class="sub">もうすぐ つかえます</span></button>
       <button class="tile" type="button" id="goPin"><span class="big">先生</span><span class="sub">名簿の登録・表示の設定・データの書き出し・動画の消去</span></button>
     </div>
     <p class="note" style="margin-top:16px">データは この端末の ブラウザの中にだけ 保存されます。ほかの端末や インターネットには 送られません。</p>
@@ -492,7 +492,7 @@ td select{min-height:40px}
   <section class="view" id="v-pin" hidden>
     <form class="pin-box" id="pinForm">
       <h2>先生メニュー</h2>
-      <label for="pinIn" class="msg">合言葉（数字4けた）を 入れてください。試作では「0000」です。</label>
+      <label for="pinIn" class="msg">先生の 合言葉（数字）を 入れてください。</label>
       <input id="pinIn" type="password" inputmode="numeric" autocomplete="off" maxlength="8">
       <button class="btn primary" type="submit">入る</button>
       <p class="msg err" id="pinMsg" hidden>合言葉が ちがいます</p>
@@ -537,6 +537,15 @@ td select{min-height:40px}
         <p class="msg" id="vidStat">しらべています…</p>
         <p class="msg">学期の終わりに、この端末の動画（と書き込み画像）をすべて消します。残したい動画は、先に各チームの「ふりかえり どうが」から書き出してください。</p>
         <div class="row"><button class="btn danger" type="button" id="vidWipe">動画をすべて消す</button></div>
+        <h2 style="margin-top:8px">先生の合言葉</h2>
+        <p class="msg err" id="pinWarn" hidden>合言葉が はじめの「0000」のままです。子どもが先生メニューに入れないように、変えてください。</p>
+        <p class="msg">この端末だけの合言葉です（数字4〜8けた）。書き出しファイルには入りません。忘れないように控えておいてください。</p>
+        <div class="row">
+          <input id="pinNew" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="新しい合言葉" aria-label="新しい合言葉" style="flex:1 1 140px;min-width:0;min-height:44px;border:1.5px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--surface)">
+          <input id="pinNew2" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="もう一度" aria-label="新しい合言葉（もう一度）" style="flex:1 1 140px;min-width:0;min-height:44px;border:1.5px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--surface)">
+          <button class="btn primary" type="button" id="pinSave">合言葉を変える</button>
+        </div>
+        <p class="msg" id="pinSaveMsg"></p>
       </div>
     </div>
     <div class="group" style="margin-top:16px">
@@ -696,7 +705,7 @@ function show(v){
   if(v==='rec') enterRec();
   if(v==='vids') enterVids();
   if(v==='cmp') enterCmp();
-  if(v==='teacher'){ renderTeacher(); renderVidStat(); }
+  if(v==='teacher'){ renderTeacher(); renderVidStat(); renderPinWarn(); $('pinSaveMsg').textContent = ''; }
   if(v==='pin'){ $('pinIn').value=''; $('pinMsg').hidden = true; setTimeout(function(){ $('pinIn').focus(); }, 50); }
   window.scrollTo(0,0);
 }
@@ -1802,6 +1811,17 @@ function guardTouch(node, active){
 }
 guardTouch($('cmpWrap'), function(){ return CM.drawing; });
 guardTouch($('boardCourt'), function(){ return cur.view==='board' && cur.mode!=='move'; });
+
+/* teacher: passphrase (この端末だけ。書き出しには入れない) */
+function renderPinWarn(){ $('pinWarn').hidden = (S.settings.pin||'0000') !== '0000'; }
+$('pinSave').addEventListener('click', function(){
+  var a = $('pinNew').value.trim(), b = $('pinNew2').value.trim(), m = $('pinSaveMsg');
+  if(!/^\d{4,8}$/.test(a)){ m.textContent = '数字4〜8けたで入れてください。'; m.className = 'msg err'; return; }
+  if(a !== b){ m.textContent = '2つの合言葉が ちがいます。'; m.className = 'msg err'; return; }
+  if(a === '0000'){ m.textContent = '「0000」以外にしてください。'; m.className = 'msg err'; return; }
+  S.settings.pin = a; if(!save()) return;
+  $('pinNew').value = ''; $('pinNew2').value = ''; m.textContent = '合言葉を変えました。'; m.className = 'msg'; renderPinWarn(); toast('合言葉を変えました');
+});
 
 /* teacher: videos */
 function renderVidStat(){
