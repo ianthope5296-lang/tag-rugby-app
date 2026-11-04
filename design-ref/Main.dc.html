@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>学習カード かわしてつないでトライ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&amp;display=swap">
+<style>
+body{margin:0;background:#ffffff}
+a{color:#1f5fae}a:hover{color:#174a88}
+</style>
+</helmet>
+<div style="width: 794px; height: 1123px; box-sizing: border-box; padding: 40px 44px; background: #ffffff; color: #1a1a1a; font-family: 'BIZ UDPGothic', sans-serif; display: flex; flex-direction: column; gap: 8px">
+  <h1 style="margin: 0; text-align: center; font-size: 36px; font-weight: 700; color: {{accent}}; letter-spacing: 2px; line-height: 1.2">かわしてつないでトライ</h1>
+  <div style="display: flex; justify-content: center">
+    <div style="width: 470px; border-bottom: 1.5px solid #1a1a1a; padding-bottom: 4px; font-size: 17px; display: flex; gap: 28px; padding-left: 8px">
+      <span>３年　　　組</span><span>　　　番</span><span>名前</span>
+    </div>
+  </div>
+
+  <h2 style="margin: 6px 0 0; font-size: 17px; font-weight: 700">たん元でこんなすがたをめざそう！</h2>
+  <div style="border: 2px solid #1a1a1a; padding: 8px 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; font-size: 14px; line-height: 20px">
+    <div style="display: flex; flex-direction: column">
+      <span>○1　友だちが取りやすいパスをしよう。</span>
+      <span>○2　相手がつけているタグを取ろう。</span>
+      <span>○3　パスをもらいやすい場に動こう。</span>
+      <span>○4　相手をかわす方法を考えよう。</span>
+      <span>○5　ボールを持っていないときの動き方を考えよう。</span>
+      <span>　</span>
+    </div>
+    <div style="display: flex; flex-direction: column">
+      <span>□1　チームでボールを運ぶ作戦を考えよう。</span>
+      <span>□2　友だちにアドバイスをしよう。</span>
+      <span>□3　ボールを運ぶ作戦をえらぼう。</span>
+      <span>◇1　友だちと声をかけ合ってゲームをしよう。</span>
+      <span>◇2　ポジティブな言葉がけをしよう。</span>
+      <span>◇3　友だちといっしょにじゅんびやかたづけをしよう。</span>
+    </div>
+  </div>
+
+  <h2 style="margin: 6px 0 0; font-size: 17px; font-weight: 700">たん元のめあて（こ人のめあて）</h2>
+  <div style="border: 2px solid #1a1a1a; height: 44px; box-sizing: border-box"></div>
+
+  <h2 style="margin: 6px 0 0; font-size: 17px; font-weight: 700">学習の記ろく</h2>
+  <div style="font-size: 12.5px; line-height: 18px">
+    <div>【めあて】前の時間のふり返りから、今日のめあてを決めましょう。</div>
+    <div>【ふり返り】できたところの番号に○をつけて、「できたこと」と「次にやりたいこと」を書きましょう。</div>
+  </div>
+
+  <div style="border: 2px solid #1a1a1a; display: flex; flex-direction: column; flex-grow: 1">
+    <div style="display: grid; grid-template-columns: 56px 168px 1fr; height: 28px; font-size: 14px; font-weight: 700; border-bottom: 1.5px solid #1a1a1a">
+      <div style="display: flex; align-items: center; justify-content: center; border-right: 1.5px solid #1a1a1a">時</div>
+      <div style="display: flex; align-items: center; padding-left: 8px; border-right: 1.5px solid #1a1a1a">めあて</div>
+      <div style="display: flex; align-items: center; padding-left: 8px">ふり返り</div>
+    </div>
+    <sc-for list="{{rows}}" as="row" hint-placeholder-count="7">
+      <div style="display: grid; grid-template-columns: 56px 168px 1fr; flex-grow: 1; border-top: {{row.line}}">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border-right: 1.5px solid #1a1a1a">
+          <span style="font-size: 20px; font-weight: 700">{{row.n}}</span>
+          <span style="font-size: 12px">／</span>
+        </div>
+        <div style="padding: 4px 8px; border-right: 1.5px solid #1a1a1a; font-size: 12px; font-weight: 700">めあて</div>
+        <div style="padding: 5px 8px; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 13px">
+            <span style="font-weight: 700">できた番号に○</span>
+            <span style="letter-spacing: 1px">○　1　2　3　4　5</span>
+            <span style="letter-spacing: 1px">□　1　2　3</span>
+            <span style="letter-spacing: 1px">◇　1　2　3</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; flex-grow: 1">
+            <div style="border: 1px solid #555555; border-radius: 4px; padding: 2px 6px; font-size: 11.5px; font-weight: 700; color: {{accent}}">できたこと</div>
+            <div style="border: 1px solid #555555; border-radius: 4px; padding: 2px 6px; font-size: 11.5px; font-weight: 700; color: #b5501f">次にやりたいこと</div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#1f5fae","options":["#1f5fae","#0f7a5a","#7a3fb0"]},"$preview":{"width":794,"height":1123}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const labels = ['1', '2', '3', '4', '5', '6', '7・8'];
+    return {
+      accent: this.props.accent ?? '#1f5fae',
+      rows: labels.map((n, i) => ({ n: n, line: i === 0 ? '0' : '1.5px solid #1a1a1a' }))
+    };
+  }
+}
+</script>
+</body>
+</html>
