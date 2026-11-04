@@ -5,7 +5,7 @@
  * 子どものデータ（名簿・作戦）は localStorage にあり、ここでは扱わない。どこにも送らない。
  * アプリを直したら VERSION を上げること（古いキャッシュが消える）。
  */
-var VERSION = 'v6';
+var VERSION = 'v7';
 var APP_CACHE = 'tryapp-app-' + VERSION;
 var FONT_CACHE = 'tryapp-fonts-v1';
 var APP_FILES = ['./', './index.html'];
