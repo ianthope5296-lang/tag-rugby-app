@@ -169,6 +169,24 @@ td select{min-height:40px}
 .vid-item .grow b{font-size:16px}
 #rateRow .btn{min-width:64px}
 @media (prefers-reduced-motion: reduce){ .rec-badge .rec-dot{animation:none} }
+/* compare */
+.cmp{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,1fr);gap:16px;align-items:start}
+.cmp-left,.cmp-right{display:flex;flex-direction:column;gap:10px;min-width:0}
+.cmp-right{align-items:stretch}
+.cmp-right .court-wrap{width:min(100%, calc((100vh - 260px) * 400 / 560));margin:0 auto}
+.cmp-right .timeline,.cmp-cap{width:100%}
+.cmp-cap{min-height:52px;font-size:18px}
+.note-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none}
+.player-wrap.drawing .note-svg{pointer-events:auto;cursor:crosshair}
+.player-wrap.drawing{outline:4px dashed var(--warm);outline-offset:3px}
+.vctl input[type=range]{flex:1 1 140px;min-width:100px;height:44px}
+.vtime{font-variant-numeric:tabular-nums;min-width:84px}
+.swatch i{display:inline-block;width:18px;height:18px;border-radius:50%;border:2px solid #1b201c}
+.note-list{display:flex;gap:10px;flex-wrap:wrap}
+.note-item{display:flex;flex-direction:column;gap:6px;width:180px;border:1.5px solid var(--line);border-radius:10px;padding:6px;font-size:13px}
+.note-item img{width:100%;border-radius:6px;display:block;background:#111}
+.note-item .row .btn{flex:1;padding:6px 8px;font-size:14px}
+@media (max-width:900px){ .cmp{grid-template-columns:1fr} .cmp-right .court-wrap{width:min(100%, 420px)} }
 @media (max-width:640px){ .assign{grid-template-columns:repeat(3,minmax(0,1fr))} .tile{min-height:120px} }
 @media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto} }
 </style>
@@ -355,6 +373,7 @@ td select{min-height:40px}
         <div class="group" id="vidInfo" hidden>
           <dl class="meta-list" id="vidMeta" style="margin:0"></dl>
           <div class="row">
+            <button class="btn warm" type="button" id="vidCmp">さくせんと ならべて 見る・かきこむ</button>
             <button class="btn primary" type="button" id="vidExport">しゃしんAppや ファイルに ほぞん</button>
           </div>
           <p class="msg" id="vidMsg"></p>
@@ -362,6 +381,63 @@ td select{min-height:40px}
         <div class="group">
           <h3>チームの どうが</h3>
           <div class="saved-list vid-list" id="vidList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARE: video + plan side by side, pause and draw -->
+  <section class="view" id="v-cmp" hidden>
+    <div class="cmp">
+      <div class="cmp-left">
+        <div class="player-wrap" id="cmpWrap">
+          <video id="cmpVideo" playsinline muted preload="auto"></video>
+          <svg class="note-svg" id="noteSvg" viewBox="0 0 16 9" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+          <div class="cam-msg" id="cmpMsg">よみこんで います…</div>
+        </div>
+        <div class="row vctl">
+          <button class="btn primary" type="button" id="cmpVPlay">▶ さいせい</button>
+          <button class="btn" type="button" id="cmpBack" aria-label="すこし もどる">◀ すこし</button>
+          <button class="btn" type="button" id="cmpFwd" aria-label="すこし すすむ">すこし ▶</button>
+          <input type="range" id="cmpSeek" min="0" max="1" step="0.05" value="0" aria-label="どうがの ばしょ">
+          <span class="msg vtime" id="cmpTime">0:00</span>
+        </div>
+        <div class="row" role="group" aria-label="さいせいの はやさ" id="cmpRates"></div>
+        <div class="group">
+          <div class="row">
+            <h3 style="flex:1">止めて かきこむ</h3>
+            <button class="btn" type="button" id="drawBtn" aria-pressed="false">✏ かきこむ</button>
+          </div>
+          <div id="drawTools" hidden>
+            <div class="row" role="group" aria-label="かく もの">
+              <button class="btn" type="button" data-tool="arrow" id="tArrow">→ やじるし</button>
+              <button class="btn" type="button" data-tool="circle" id="tCircle">◯ まる</button>
+            </div>
+            <div class="row" role="group" aria-label="いろ" style="margin-top:8px">
+              <button class="btn swatch" type="button" data-color="#ffd400"><i style="background:#ffd400"></i>きいろ</button>
+              <button class="btn swatch" type="button" data-color="#ff3b30"><i style="background:#ff3b30"></i>あか</button>
+              <button class="btn swatch" type="button" data-color="#ffffff"><i style="background:#ffffff"></i>しろ</button>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <button class="btn ghost" type="button" id="noteUndo">1つ けす</button>
+              <button class="btn danger" type="button" id="noteClear">ぜんぶ けす</button>
+              <button class="btn warm" type="button" id="noteSave">がぞうに して ほぞん</button>
+            </div>
+          </div>
+          <p class="msg" id="drawHint">✏ を おすと どうがが 止まって、ゆびで やじるしや まるを かけます。</p>
+          <div class="note-list" id="noteList"></div>
+        </div>
+      </div>
+      <div class="cmp-right">
+        <label class="msg" for="cmpPlan">くらべる さくせん</label>
+        <select id="cmpPlan"></select>
+        <div class="caption cmp-cap" id="cmpCap"></div>
+        <div class="court-wrap" id="cmpCourt"></div>
+        <div class="timeline"><i id="cmpTl"></i></div>
+        <div class="row" id="cmpAnimCtl">
+          <button class="btn primary" type="button" id="cmpPlay">▶ アニメ</button>
+          <button class="btn" type="button" id="cmpReplay">もう一回</button>
+          <button class="btn" type="button" id="cmpSlow" aria-pressed="false">ゆっくり</button>
         </div>
       </div>
     </div>
@@ -414,7 +490,7 @@ td select{min-height:40px}
         <p class="msg" id="dataMsg"></p>
         <h2 style="margin-top:8px">撮影した動画</h2>
         <p class="msg" id="vidStat">しらべています…</p>
-        <p class="msg">学期の終わりに、この端末の動画をすべて消します。残したい動画は、先に各チームの「ふりかえり どうが」から書き出してください。</p>
+        <p class="msg">学期の終わりに、この端末の動画（と書き込み画像）をすべて消します。残したい動画は、先に各チームの「ふりかえり どうが」から書き出してください。</p>
         <div class="row"><button class="btn danger" type="button" id="vidWipe">動画をすべて消す</button></div>
       </div>
     </div>
@@ -555,17 +631,18 @@ function displayName(m){
 }
 
 /* ---------- navigation ---------- */
-var BACK = {teams:'home', board:'teams', anim:'board', pin:'home', teacher:'home', rec:'board', vids:'board'};
+var BACK = {teams:'home', board:'teams', anim:'board', pin:'home', teacher:'home', rec:'board', vids:'board', cmp:'vids'};
 function show(v){
   stopAnim();
   if(cur.view==='rec' && v!=='rec') leaveRec();
   if(cur.view==='vids' && v!=='vids') leaveVids();
+  if(cur.view==='cmp' && v!=='cmp') leaveCmp();
   cur.view = v;
-  ['home','teams','board','anim','rec','vids','pin','teacher'].forEach(function(n){ $('v-'+n).hidden = (n!==v); });
+  ['home','teams','board','anim','rec','vids','cmp','pin','teacher'].forEach(function(n){ $('v-'+n).hidden = (n!==v); });
   $('backBtn').hidden = (v==='home');
   var t = cur.teamId ? team(cur.teamId) : null;
   var crumbs = {home:'', teams:'チームを えらぶ', board: t ? 'チーム「'+t.name+'」の さくせんボード' : '', anim:'さくせんアニメ',
-    rec: t ? 'チーム「'+t.name+'」 どうがを とる' : '', vids: t ? 'チーム「'+t.name+'」 ふりかえり どうが' : '', pin:'先生メニュー', teacher:'先生メニュー'};
+    rec: t ? 'チーム「'+t.name+'」 どうがを とる' : '', vids: t ? 'チーム「'+t.name+'」 ふりかえり どうが' : '', cmp: t ? 'チーム「'+t.name+'」 ならべて 見る' : '', pin:'先生メニュー', teacher:'先生メニュー'};
   $('crumb').textContent = crumbs[v] || '';
   $('sampleFlag').hidden = !S.settings.sample;
   if(v==='teams') renderTeams();
@@ -573,6 +650,7 @@ function show(v){
   if(v==='anim') renderAnim();
   if(v==='rec') enterRec();
   if(v==='vids') enterVids();
+  if(v==='cmp') enterCmp();
   if(v==='teacher'){ renderTeacher(); renderVidStat(); }
   if(v==='pin'){ $('pinIn').value=''; $('pinMsg').hidden = true; setTimeout(function(){ $('pinIn').focus(); }, 50); }
   window.scrollTo(0,0);
@@ -802,7 +880,7 @@ function setupPen(wrap){
   });
 }
 /* turn a wobbly finger line into a simple arrow: keep only the main turning points (at most 4) */
-function simplify(pts){
+function simplify(pts, eps0){
   function rdp(a, eps){
     if(a.length<3) return a;
     var s = a[0], e = a[a.length-1], dx = e[0]-s[0], dy = e[1]-s[1], L = Math.hypot(dx,dy)||1, idx = 0, mx = 0;
@@ -810,7 +888,7 @@ function simplify(pts){
     if(mx<=eps) return [s,e];
     var l = rdp(a.slice(0,idx+1), eps), r = rdp(a.slice(idx), eps); return l.slice(0,-1).concat(r);
   }
-  var eps = 14, out = rdp(pts, eps);
+  var eps = eps0 || 14, out = rdp(pts, eps);
   while(out.length>4){ eps *= 1.5; out = rdp(pts, eps); }
   return out;
 }
@@ -982,30 +1060,35 @@ function renderAnim(){
     p.addEventListener('click', function(){ cur.anim.card = x.id; cur.anim.t = 0; stopAnim(); renderAnim(); }); list.appendChild(p); });
   $('useThis').hidden = !cur.teamId;
   $('showName').disabled = !cur.teamId;
-  var wrap = $('animCourt'); wrap.innerHTML = courtSVG(); drawPlan(c, wrap);
-  var t = cur.teamId ? team(cur.teamId) : null; var b = t ? boardState() : null;
+  var t = cur.teamId ? team(cur.teamId) : null;
+  buildAnimCourt($('animCourt'), c, cur.anim.names && t ? boardState() : null);
+  $('showNum').classList.toggle('on', !cur.anim.names); $('showName').classList.toggle('on', cur.anim.names);
+  $('slowBtn').classList.toggle('on', cur.anim.slow); $('slowBtn').setAttribute('aria-pressed', String(cur.anim.slow));
+  frame(c, cur.anim.t);
+}
+/* さくせんアニメの コートを つくる（さくせんアニメの画面と、ならべて見る画面で つかう）。namesBoard を わたすと 名前を 出す */
+function buildAnimCourt(wrap, c, namesBoard){
+  wrap.innerHTML = courtSVG(); drawPlan(c, wrap);
+  var b = namesBoard;
   for(var i=1;i<=4;i++){
     var pp = el('div',{class:'person'}); pp.dataset.key = String(i); pp.innerHTML = personSVG(LANE[i-1], String(i));
-    if(cur.anim.names && b && b.assign[String(i)]){ var m = member(b.assign[String(i)]); if(m) pp.appendChild(el('span',{class:'pname'}, displayName(m))); }
+    if(b && b.assign[String(i)]){ var m = member(b.assign[String(i)]); if(m) pp.appendChild(el('span',{class:'pname'}, displayName(m))); }
     wrap.appendChild(pp);
   }
   ['d1','d2'].forEach(function(k){ var d = el('div',{class:'person'}); d.dataset.key = k; d.innerHTML = personSVG('#3d4440','ま'); wrap.appendChild(d); });
   var ball = el('div',{class:'ball'}); ball.dataset.key = 'ball'; ball.innerHTML = BALL_SVG; wrap.appendChild(ball);
   (c.bubbles||[]).forEach(function(bb, j){ var bu = el('div',{class:'bubble'}, bb[3]); bu.dataset.j = String(j); bu.hidden = true; wrap.appendChild(bu); });
-  $('showNum').classList.toggle('on', !cur.anim.names); $('showName').classList.toggle('on', cur.anim.names);
-  $('slowBtn').classList.toggle('on', cur.anim.slow); $('slowBtn').setAttribute('aria-pressed', String(cur.anim.slow));
-  frame(c, cur.anim.t);
 }
-function frame(c, t){
-  var wrap = $('animCourt');
+function frame(c, t, wrap, capEl, tlEl){
+  wrap = wrap || $('animCourt'); capEl = capEl || $('caption'); tlEl = tlEl || $('tl');
   wrap.querySelectorAll('.person').forEach(function(tk){ var p = interp(c.path[tk.dataset.key], t); pct(p[0],p[1],tk); tk.style.zIndex = String(10 + Math.round(p[1])); pose(c, tk.dataset.key, t, tk); });
   var bp = ballAt(c, t); pct(bp[0], bp[1], wrap.querySelector('.ball'));
   wrap.querySelectorAll('.bubble').forEach(function(bu){ var bb = c.bubbles[+bu.dataset.j]; var on = t>=bb[0] && t<bb[1]; bu.hidden = !on;
     if(on){ var p = interp(c.path[bb[2]], t); pct(Math.max(70,Math.min(330,p[0])), p[1]-52, bu); } });
   var ink = wrap.querySelector('svg.ink'); if(ink) ink.style.opacity = (t<=0 || t>=duration(c)) ? '1' : '.35';
   var cap = '▶ を おして スタート'; if(t>0){ for(var i=0;i<c.caps.length;i++){ if(t>=c.caps[i][0]) cap = c.caps[i][1]; } }
-  $('caption').textContent = cap;
-  $('tl').style.width = Math.min(100, t/duration(c)*100)+'%';
+  capEl.textContent = cap;
+  tlEl.style.width = Math.min(100, t/duration(c)*100)+'%';
 }
 function tick(ts){
   var c = cardById(cur.anim.card); if(!c) return;
@@ -1162,7 +1245,7 @@ $('importIn').addEventListener('change', function(){
 /* ---------- video storage (IndexedDB) ----------
    'videos'：一らん用の じょうほう（小さい）。'blobs'：どうが そのもの。
    端末の中だけに ほぞんする。どこにも おくらない。 */
-var DB_NAME = 'tryapp-media', DB_VER = 1, dbP = null;
+var DB_NAME = 'tryapp-media', DB_VER = 2, dbP = null;
 function db(){
   if(dbP) return dbP;
   dbP = new Promise(function(res, rej){
@@ -1170,7 +1253,8 @@ function db(){
     var r = indexedDB.open(DB_NAME, DB_VER);
     r.onupgradeneeded = function(){ var d = r.result;
       if(!d.objectStoreNames.contains('videos')){ var s = d.createObjectStore('videos', {keyPath:'id'}); s.createIndex('team', 'teamId'); }
-      if(!d.objectStoreNames.contains('blobs')) d.createObjectStore('blobs', {keyPath:'id'}); };
+      if(!d.objectStoreNames.contains('blobs')) d.createObjectStore('blobs', {keyPath:'id'});
+      if(!d.objectStoreNames.contains('notes')){ var n = d.createObjectStore('notes', {keyPath:'id'}); n.createIndex('video', 'videoId'); } };
     r.onsuccess = function(){ res(r.result); };
     r.onerror = function(){ rej(r.error); };
   });
@@ -1194,8 +1278,15 @@ function putVideo(meta, blob){
 function listVideos(teamId){ return dbRun(['videos'], 'readonly', function(t){ var s = t.objectStore('videos'); return teamId ? s.index('team').getAll(teamId) : s.getAll(); }); }
 function getVideoBlob(id){ return dbRun(['blobs'], 'readonly', function(t){ return t.objectStore('blobs').get(id); }).then(function(r){
   if(!r) throw new Error('nofile'); return r.blob || new Blob([r.buf], {type:r.type||'video/mp4'}); }); }
-function delVideo(id){ return dbRun(['videos','blobs'], 'readwrite', function(t){ t.objectStore('blobs').delete(id); return t.objectStore('videos').delete(id); }); }
-function wipeVideos(){ return dbRun(['videos','blobs'], 'readwrite', function(t){ t.objectStore('blobs').clear(); return t.objectStore('videos').clear(); }); }
+function delVideo(id){ return dbRun(['videos','blobs','notes'], 'readwrite', function(t){
+  t.objectStore('blobs').delete(id);
+  var ns = t.objectStore('notes'); ns.index('video').getAllKeys(id).onsuccess = function(e){ e.target.result.forEach(function(k){ ns.delete(k); }); };
+  return t.objectStore('videos').delete(id); }); }
+function wipeVideos(){ return dbRun(['videos','blobs','notes'], 'readwrite', function(t){ t.objectStore('blobs').clear(); t.objectStore('notes').clear(); return t.objectStore('videos').clear(); }); }
+/* かきこみ画像：{id, videoId, teamId, at, t（どうがの 何びょう目）, blob} */
+function putNote(rec){ return dbRun(['notes'], 'readwrite', function(t){ return t.objectStore('notes').put(rec); }); }
+function listNotes(videoId){ return dbRun(['notes'], 'readonly', function(t){ var s = t.objectStore('notes'); return videoId ? s.index('video').getAll(videoId) : s.getAll(); }); }
+function delNote(id){ return dbRun(['notes'], 'readwrite', function(t){ return t.objectStore('notes').delete(id); }); }
 
 var WEEK = ['日','月','火','水','木','金','土'];
 function ymd(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
@@ -1314,15 +1405,16 @@ $('recToVids').addEventListener('click', function(){ show('vids'); });
 var RATES = [[0.25,'とても ゆっくり','×0.25'],[0.5,'ゆっくり','×0.5'],[1,'ふつう','×1'],[2,'はやい','×2'],[4,'とても はやい','×4']];
 var V = {list:[], sel:null, blob:null, url:null, rate:1};
 function applyRate(){ var p = $('player'); p.defaultPlaybackRate = V.rate; p.playbackRate = V.rate; }
-function renderRates(){
-  var box = $('rateRow'); box.textContent = '';
+function rateRow(box, now, onPick){
+  box.textContent = '';
   RATES.forEach(function(r){
-    var b = el('button',{class:'btn'+(V.rate===r[0]?' on':''), type:'button', 'aria-pressed':String(V.rate===r[0])});
-    b.appendChild(el('span',{}, (V.rate===r[0]?'✓ ':'')+r[1])); b.appendChild(el('small',{style:'font-weight:400'}, r[2]));
-    b.addEventListener('click', function(){ V.rate = r[0]; applyRate(); renderRates(); });
+    var b = el('button',{class:'btn'+(now===r[0]?' on':''), type:'button', 'aria-pressed':String(now===r[0])});
+    b.appendChild(el('span',{}, (now===r[0]?'✓ ':'')+r[1])); b.appendChild(el('small',{style:'font-weight:400'}, r[2]));
+    b.addEventListener('click', function(){ onPick(r[0]); });
     box.appendChild(b);
   });
 }
+function renderRates(){ rateRow($('rateRow'), V.rate, function(v){ V.rate = v; applyRate(); renderRates(); }); }
 $('player').addEventListener('loadedmetadata', applyRate);
 $('player').addEventListener('play', function(){ if($('player').playbackRate !== V.rate) applyRate(); });
 function clearPlayer(){
@@ -1331,7 +1423,11 @@ function clearPlayer(){
   V.blob = null; V.sel = null; $('vidInfo').hidden = true; $('playerMsg').hidden = false; $('vidMsg').textContent = '';
 }
 function leaveVids(){ clearPlayer(); }
-function enterVids(){ renderRates(); clearPlayer(); $('playerMsg').textContent = '右の 一らんから えらんでね'; loadVidList(); }
+function enterVids(){
+  renderRates(); clearPlayer(); $('playerMsg').textContent = '右の 一らんから えらんでね';
+  var back = cur.cmpVid; cur.cmpVid = null;
+  loadVidList().then(function(){ if(back && V.list.some(function(r){ return r.id===back.id; })) selectVid(back); });
+}
 function loadVidList(){
   var box = $('vidList');
   return listVideos(cur.teamId).then(function(l){
@@ -1370,19 +1466,240 @@ function vidFileName(r){
   var plan = r.origName ? r.origName : (r.card && cardById(r.card) ? cardById(r.card).name : 'カードなし');
   return ['タグラグビー', r.teamName||'', r.date.replace(/-/g,''), r.period+'時間目', plan].join('_').replace(/[\\\/:*?"<>|\s]+/g,'_') + ext;
 }
-$('vidExport').addEventListener('click', function(){
-  var r = V.sel, blob = V.blob; if(!r || !blob) return;
-  var fn = vidFileName(r), type = r.mime || blob.type || 'video/mp4', file = null;
-  try{ file = new File([blob], fn, {type:type}); }catch(e){}
-  function dl(){ $('vidMsg').textContent = saveFile(fn, blob, type) ? '「'+fn+'」を ほぞんしました（ファイルAppの「ダウンロード」）。' : 'ほぞん できませんでした。'; }
-  // 共有シートを出す（iPadでは「ビデオを保存」で しゃしんAppに 入る）。ユーザーの操作の中で すぐに よぶ。
+/* 共有シートを出す（iPadでは「ビデオを保存」「画像を保存」で しゃしんAppに 入る）。
+   ユーザーの操作の中で すぐに よぶこと（あいだに 読みこみなどを はさむと、Safariが ことわる）。使えなければ ファイルとして ほぞん。 */
+function shareOrSave(fn, blob, type, msgEl){
+  var file = null; try{ file = new File([blob], fn, {type:type}); }catch(e){}
+  function dl(){ msgEl.textContent = saveFile(fn, blob, type) ? '「'+fn+'」を ほぞんしました（ファイルAppの「ダウンロード」）。' : 'ほぞん できませんでした。'; }
   if(file && navigator.canShare && navigator.share && navigator.canShare({files:[file]})){
-    navigator.share({files:[file]}).then(function(){ $('vidMsg').textContent = 'ほぞん しました。'; })
-      .catch(function(e){ if(e && e.name==='AbortError') $('vidMsg').textContent = 'やめました。'; else dl(); });
+    navigator.share({files:[file]}).then(function(){ msgEl.textContent = 'ほぞん しました。'; })
+      .catch(function(e){ if(e && e.name==='AbortError') msgEl.textContent = 'やめました。'; else dl(); });
     return;
   }
   dl();
+}
+$('vidExport').addEventListener('click', function(){
+  var r = V.sel, blob = V.blob; if(!r || !blob) return;
+  shareOrSave(vidFileName(r), blob, r.mime || blob.type || 'video/mp4', $('vidMsg'));
 });
+$('vidCmp').addEventListener('click', function(){ if(!V.sel) return; cur.cmpVid = V.sel; show('cmp'); });
+
+/* ---------- compare: video + plan side by side, pause and draw ---------- */
+var CM = {rec:null, blob:null, url:null, rate:1, vw:16, vh:9, plan:'', t:0, playing:false, slow:false, raf:0, last:0,
+  drawing:false, tool:'arrow', color:'#ffd400', shapes:[], saved:true, playArmed:false, notes:[], noteUrls:[]};
+var NS = 'http://www.w3.org/2000/svg';
+function origOf(r){ if(!r.origId) return null; var l = (S.originals||{})[r.teamId] || []; for(var i=0;i<l.length;i++){ if(l[i].id===r.origId) return l[i]; } return null; }
+/* 同じ画面に コートが いくつか あるので、やじるしの 先の id を この コートだけの ものに する */
+function uniqMarkers(wrap, sfx){
+  wrap.querySelectorAll('marker').forEach(function(m){ m.id = m.id + sfx; });
+  wrap.querySelectorAll('[marker-end]').forEach(function(p){ p.setAttribute('marker-end', p.getAttribute('marker-end').replace(/#(\w+)\)/, '#$1'+sfx+')')); });
+}
+function enterCmp(){
+  var r = cur.cmpVid; if(!r){ show('vids'); return; }
+  CM.rec = r; CM.shapes = []; CM.saved = true; CM.playArmed = false; setDrawing(false); setTool(CM.tool); setColor(CM.color);
+  $('cmpMsg').textContent = 'よみこんで います…'; $('cmpMsg').hidden = false; $('cmpVPlay').textContent = '▶ さいせい';
+  $('drawHint').textContent = '✏ を おすと どうがが 止まって、ゆびで やじるしや まるを かけます。'; $('noteList').textContent = '';
+  renderCmpRates(); fillPlanSelect(r); renderPlanSide(); loadNotes();
+  getVideoBlob(r.id).then(function(blob){
+    if(cur.view!=='cmp' || CM.rec!==r) return;
+    CM.blob = blob; CM.url = URL.createObjectURL(blob);
+    var v = $('cmpVideo'); v.src = CM.url; applyCmpRate();
+  }).catch(function(){ $('cmpMsg').textContent = 'この どうがを ひらけませんでした'; });
+}
+function leaveCmp(){
+  cmpStopAnim(); var v = $('cmpVideo'); v.pause(); v.removeAttribute('src'); try{ v.load(); }catch(e){}
+  if(CM.url){ URL.revokeObjectURL(CM.url); CM.url = null; } CM.blob = null;
+  CM.noteUrls.forEach(function(u){ URL.revokeObjectURL(u); }); CM.noteUrls = []; CM.notes = [];
+  setDrawing(false);
+}
+/* --- video side --- */
+function vDur(){ var v = $('cmpVideo'); return isFinite(v.duration) && v.duration > 0 ? v.duration : (CM.rec ? CM.rec.dur : 0); }
+function applyCmpRate(){ var v = $('cmpVideo'); v.defaultPlaybackRate = CM.rate; v.playbackRate = CM.rate; }
+function renderCmpRates(){ rateRow($('cmpRates'), CM.rate, function(x){ CM.rate = x; applyCmpRate(); renderCmpRates(); }); }
+$('cmpVideo').addEventListener('loadedmetadata', function(){
+  var v = $('cmpVideo'); CM.vw = v.videoWidth || 16; CM.vh = v.videoHeight || 9;
+  $('noteSvg').setAttribute('viewBox', '0 0 '+CM.vw+' '+CM.vh); $('cmpSeek').max = String(vDur()); applyCmpRate(); renderShapes();
+  $('cmpMsg').hidden = true; updTime();
+});
+function updTime(){ var v = $('cmpVideo'); $('cmpTime').textContent = mmss(v.currentTime)+' / '+mmss(vDur()); if(document.activeElement !== $('cmpSeek')) $('cmpSeek').value = String(v.currentTime); }
+$('cmpVideo').addEventListener('timeupdate', updTime);
+$('cmpVideo').addEventListener('play', function(){ $('cmpVPlay').textContent = '❚❚ 止める'; if($('cmpVideo').playbackRate !== CM.rate) applyCmpRate(); });
+$('cmpVideo').addEventListener('pause', function(){ $('cmpVPlay').textContent = '▶ さいせい'; updTime(); });
+$('cmpVideo').addEventListener('ended', function(){ $('cmpVPlay').textContent = '▶ さいせい'; });
+/* かいた ものが あるのに うごかすと、かいた ものは きえる。ほぞんして いないときは「もう一度おす」 */
+function okToMove(){
+  if(!CM.shapes.length) return true;
+  if(!CM.saved && !CM.playArmed){ CM.playArmed = true; toast('かいた ものが きえます。もう一ど おしてね'); setTimeout(function(){ CM.playArmed = false; }, 3000); return false; }
+  CM.playArmed = false; CM.shapes = []; CM.saved = true; renderShapes(); return true;
+}
+$('cmpVPlay').addEventListener('click', function(){
+  var v = $('cmpVideo'); if(!CM.url) return;
+  if(!v.paused){ v.pause(); return; }
+  if(!okToMove()) return; setDrawing(false);
+  if(v.ended || v.currentTime >= vDur() - 0.05) v.currentTime = 0;
+  var p = v.play(); if(p && p.catch) p.catch(function(){});
+});
+function stepBy(d){ var v = $('cmpVideo'); if(!CM.url || !okToMove()) return; v.pause(); v.currentTime = Math.max(0, Math.min(vDur(), v.currentTime + d)); }
+$('cmpBack').addEventListener('click', function(){ stepBy(-0.5); });
+$('cmpFwd').addEventListener('click', function(){ stepBy(0.5); });
+$('cmpSeek').addEventListener('input', function(){ var v = $('cmpVideo'); if(!CM.url) return;
+  if(CM.shapes.length){ CM.shapes = []; CM.saved = true; renderShapes(); } v.pause(); v.currentTime = +$('cmpSeek').value; updTime(); });
+
+/* --- drawing on the paused video --- */
+function setDrawing(on){
+  CM.drawing = on; $('cmpWrap').classList.toggle('drawing', on); $('drawTools').hidden = !on;
+  $('drawBtn').classList.toggle('on', on); $('drawBtn').setAttribute('aria-pressed', String(on));
+  $('drawBtn').textContent = on ? '✓ かきこみ ちゅう' : '✏ かきこむ';
+  if(on){ var v = $('cmpVideo'); if(!v.paused) v.pause(); }
+}
+function setTool(t){ CM.tool = t; [['tArrow','arrow'],['tCircle','circle']].forEach(function(x){ var b = $(x[0]); b.classList.toggle('on', x[1]===t); b.setAttribute('aria-pressed', String(x[1]===t)); }); }
+function setColor(c){ CM.color = c; document.querySelectorAll('.swatch').forEach(function(b){ var on = b.dataset.color===c; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); }
+$('drawBtn').addEventListener('click', function(){ if(!CM.url) return; setDrawing(!CM.drawing); });
+$('tArrow').addEventListener('click', function(){ setTool('arrow'); });
+$('tCircle').addEventListener('click', function(){ setTool('circle'); });
+document.querySelectorAll('.swatch').forEach(function(b){ b.addEventListener('click', function(){ setColor(b.dataset.color); }); });
+function sw(){ return Math.max(3, Math.min(CM.vw, CM.vh) / 70); }
+/* 形の データ → 線の 形（SVGと キャンバスで 同じものを つかう） */
+function shapeGeom(sh){
+  var w = sw();
+  if(sh.type==='circle'){
+    var xs = sh.pts.map(function(p){ return p[0]; }), ys = sh.pts.map(function(p){ return p[1]; });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    return {ellipse:[(x0+x1)/2, (y0+y1)/2, Math.max(w*2, (x1-x0)/2), Math.max(w*2, (y1-y0)/2)]};
+  }
+  var pts = sh.pts, n = pts.length, a = pts[n-2], b = pts[n-1], ang = Math.atan2(b[1]-a[1], b[0]-a[0]), L = w*3.6;
+  var head = [[b[0]+Math.cos(ang)*L*0.35, b[1]+Math.sin(ang)*L*0.35], [b[0]+Math.cos(ang+2.6)*L, b[1]+Math.sin(ang+2.6)*L], [b[0]+Math.cos(ang-2.6)*L, b[1]+Math.sin(ang-2.6)*L]];
+  return {d:smoothD(pts), head:head};
+}
+function svgShape(sh, live){
+  var g = document.createElementNS(NS, 'g'), w = sw(), geo = live ? {d:pathD(sh.pts)} : shapeGeom(sh);
+  [['rgba(0,0,0,.55)', w*1.9], [sh.color, w]].forEach(function(st){
+    var e;
+    if(geo.ellipse){ e = document.createElementNS(NS, 'ellipse'); e.setAttribute('cx', geo.ellipse[0]); e.setAttribute('cy', geo.ellipse[1]); e.setAttribute('rx', geo.ellipse[2]); e.setAttribute('ry', geo.ellipse[3]); }
+    else { e = document.createElementNS(NS, 'path'); e.setAttribute('d', geo.d); }
+    e.setAttribute('fill', 'none'); e.setAttribute('stroke', st[0]); e.setAttribute('stroke-width', st[1]); e.setAttribute('stroke-linecap', 'round'); e.setAttribute('stroke-linejoin', 'round');
+    g.appendChild(e);
+    if(geo.head){ var h = document.createElementNS(NS, 'polygon'); h.setAttribute('points', geo.head.map(function(p){ return p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' '));
+      h.setAttribute('fill', st[0]===sh.color ? sh.color : 'rgba(0,0,0,.55)'); h.setAttribute('stroke', st[0]); h.setAttribute('stroke-width', st[0]===sh.color ? 1 : w*0.9); h.setAttribute('stroke-linejoin', 'round'); g.appendChild(h); }
+  });
+  return g;
+}
+function renderShapes(){ var s = $('noteSvg'); s.textContent = ''; CM.shapes.forEach(function(sh){ s.appendChild(svgShape(sh)); }); }
+function toVideo(e){ var s = $('noteSvg'), m = s.getScreenCTM(); if(!m) return [0,0]; var p = s.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; p = p.matrixTransform(m.inverse());
+  return [Math.max(0, Math.min(CM.vw, p.x)), Math.max(0, Math.min(CM.vh, p.y))]; }
+$('noteSvg').addEventListener('pointerdown', function(e){
+  if(!CM.drawing) return; e.preventDefault();
+  var s = $('noteSvg'); try{ s.setPointerCapture(e.pointerId); }catch(_){}
+  var sh = {type:CM.tool, color:CM.color, pts:[toVideo(e)]}, live = svgShape(sh, true); s.appendChild(live);
+  function mv(ev){ var p = toVideo(ev), l = sh.pts[sh.pts.length-1]; if(Math.hypot(p[0]-l[0], p[1]-l[1]) > sw()*0.6){ sh.pts.push(p); s.replaceChild(svgShape(sh, true), live); live = s.lastChild; } }
+  function up(){ s.removeEventListener('pointermove', mv); s.removeEventListener('pointerup', up); s.removeEventListener('pointercancel', up);
+    var a = sh.pts[0], z = sh.pts[sh.pts.length-1], far = 0; sh.pts.forEach(function(p){ far = Math.max(far, Math.hypot(p[0]-a[0], p[1]-a[1])); });
+    if(sh.type==='arrow' && Math.hypot(z[0]-a[0], z[1]-a[1]) > sw()*3){ sh.pts = simplify(sh.pts, sw()*2.5); CM.shapes.push(sh); CM.saved = false; }
+    else if(sh.type==='circle' && far > sw()*3){ CM.shapes.push(sh); CM.saved = false; }
+    renderShapes(); }
+  s.addEventListener('pointermove', mv); s.addEventListener('pointerup', up); s.addEventListener('pointercancel', up);
+});
+$('noteUndo').addEventListener('click', function(){ CM.shapes.pop(); renderShapes(); });
+(function(){ var bt = $('noteClear'), armed = false;
+  bt.addEventListener('click', function(){
+    if(!CM.shapes.length) return;
+    if(!armed){ armed = true; bt.textContent = 'もう一度 おすと けします'; setTimeout(function(){ armed = false; bt.textContent = 'ぜんぶ けす'; }, 3000); return; }
+    armed = false; bt.textContent = 'ぜんぶ けす'; CM.shapes = []; CM.saved = true; renderShapes();
+  }); })();
+/* 止めた 画面と かいた ものを 1まいの 画像（JPEG）に する */
+function canvasShape(g, sh){
+  var w = sw(), geo = shapeGeom(sh);
+  [['rgba(0,0,0,.55)', w*1.9], [sh.color, w]].forEach(function(st){
+    g.strokeStyle = st[0]; g.lineWidth = st[1]; g.lineCap = 'round'; g.lineJoin = 'round';
+    if(geo.ellipse){ g.beginPath(); g.ellipse(geo.ellipse[0], geo.ellipse[1], geo.ellipse[2], geo.ellipse[3], 0, 0, Math.PI*2); g.stroke(); }
+    else { g.stroke(new Path2D(geo.d));
+      g.beginPath(); geo.head.forEach(function(p, i){ if(i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); }); g.closePath();
+      g.fillStyle = st[0]===sh.color ? sh.color : 'rgba(0,0,0,.55)'; g.lineWidth = st[0]===sh.color ? 1 : w*0.9; g.stroke(); g.fill(); }
+  });
+}
+$('noteSave').addEventListener('click', function(){
+  var v = $('cmpVideo'), r = CM.rec; if(!r || !v.videoWidth){ toast('どうがを よみこんでから ほぞんしてね'); return; }
+  if(!CM.shapes.length){ toast('やじるしや まるを かいてから ほぞんしてね'); return; }
+  var cv = document.createElement('canvas'); cv.width = CM.vw; cv.height = CM.vh; var g = cv.getContext('2d');
+  try{ g.drawImage(v, 0, 0, CM.vw, CM.vh); }catch(e){ toast('がぞうに できませんでした'); return; }
+  CM.shapes.forEach(function(sh){ canvasShape(g, sh); });
+  var bar = Math.round(Math.min(CM.vw, CM.vh) * 0.07);
+  g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(0, CM.vh-bar, CM.vw, bar);
+  g.fillStyle = '#ffffff'; g.font = '700 '+Math.round(bar*0.55)+'px "BIZ UDPGothic","Hiragino Kaku Gothic ProN",sans-serif'; g.textBaseline = 'middle';
+  g.fillText([r.teamName||'', dayLabel(r.date)+' '+r.period+'時間目', planLabel(r), mmss(v.currentTime)].join('　'), bar*0.4, CM.vh - bar/2);
+  var t = v.currentTime;
+  cv.toBlob(function(blob){
+    if(!blob){ toast('がぞうに できませんでした'); return; }
+    var rec = {id:'n'+Date.now(), videoId:r.id, teamId:r.teamId, at:new Date().toISOString(), t:t, blob:blob};
+    putNote(rec).then(function(){ CM.saved = true; toast('がぞうを ほぞんしました。下から しゃしんAppにも 入れられます'); loadNotes(); })
+      .catch(function(){ toast('ほぞん できませんでした（いっぱいかも）'); });
+  }, 'image/jpeg', 0.9);
+});
+function noteFileName(r, n){ return vidFileName(r).replace(/\.\w+$/, '') + '_かきこみ_' + mmss(n.t).replace(':','-') + '.jpg'; }
+function loadNotes(){
+  var r = CM.rec; if(!r) return;
+  listNotes(r.id).then(function(l){
+    if(cur.view!=='cmp' || CM.rec!==r) return;
+    CM.noteUrls.forEach(function(u){ URL.revokeObjectURL(u); }); CM.noteUrls = [];
+    CM.notes = l.sort(function(a,b){ return a.at < b.at ? 1 : -1; }); renderNotes();
+  }).catch(function(){});
+}
+function renderNotes(){
+  var box = $('noteList'); box.textContent = '';
+  CM.notes.forEach(function(n){
+    var it = el('div',{class:'note-item'}), u = URL.createObjectURL(n.blob); CM.noteUrls.push(u);
+    var img = el('img',{src:u, alt:mmss(n.t)+' の かきこみ'}); it.appendChild(img);
+    var go = el('button',{class:'btn ghost', type:'button'}, mmss(n.t)+' を 見る');
+    go.addEventListener('click', function(){ if(!okToMove()) return; var v = $('cmpVideo'); v.pause(); v.currentTime = n.t; });
+    it.appendChild(go);
+    var row = el('div',{class:'row'}), sv = el('button',{class:'btn', type:'button'}, 'しゃしんAppへ'), del = el('button',{class:'btn ghost', type:'button'}, 'けす'), armed = false;
+    sv.addEventListener('click', function(){ shareOrSave(noteFileName(CM.rec, n), n.blob, 'image/jpeg', $('drawHint')); });
+    del.addEventListener('click', function(){
+      if(!armed){ armed = true; del.textContent = 'もう一ど'; setTimeout(function(){ armed = false; del.textContent = 'けす'; }, 3000); return; }
+      delNote(n.id).then(loadNotes).catch(function(){ toast('けせませんでした'); });
+    });
+    row.appendChild(sv); row.appendChild(del); it.appendChild(row); box.appendChild(it);
+  });
+}
+
+/* --- plan side: the play's animation, or an original play's arrows --- */
+function fillPlanSelect(r){
+  var s = $('cmpPlan'); s.textContent = ''; var o = origOf(r);
+  if(o) s.appendChild(el('option',{value:'orig'}, '★ '+o.name+'（線の 図）'));
+  if(!o && !r.card) s.appendChild(el('option',{value:''}, '― えらんでね ―'));
+  CARDS.forEach(function(c){ s.appendChild(el('option',{value:c.id}, c.no+' '+c.name+'（アニメ）')); });
+  CM.plan = o ? 'orig' : (r.card || ''); s.value = CM.plan;
+}
+$('cmpPlan').addEventListener('change', function(){ CM.plan = $('cmpPlan').value; renderPlanSide(); });
+function renderPlanSide(){
+  cmpStopAnim(); CM.t = 0; var wrap = $('cmpCourt'), r = CM.rec;
+  var c = cardById(CM.plan);
+  $('cmpAnimCtl').hidden = !c; $('cmpTl').parentNode.hidden = !c;
+  if(c){ buildAnimCourt(wrap, c, null); uniqMarkers(wrap, 'C'); frame(c, 0, wrap, $('cmpCap'), $('cmpTl')); $('cmpCap').textContent = c.name; return; }
+  wrap.innerHTML = courtSVG();
+  var o = CM.plan==='orig' ? origOf(r) : null;
+  if(!o){ uniqMarkers(wrap, 'C'); $('cmpCap').textContent = CM.plan==='orig' ? 'もとの オリジナル さくせんが 見つかりません' : 'くらべる さくせんを えらんでね'; return; }
+  $('cmpCap').textContent = '★ ' + o.name;
+  var g = wrap.querySelector('svg.ink .lines'), bc = o.base ? cardById(o.base) : null;
+  if(bc) bc.plan.forEach(function(l){ g.appendChild(lineEl(l, true)); });
+  o.lines.forEach(function(l){ if(l.pts.length > 1) g.appendChild(lineEl(l)); });
+  for(var i=1;i<=4;i++){ var mid = o.assign && o.assign[String(i)], p = mid && o.pos ? o.pos[mid] : null; if(!p) continue;
+    var ci = document.createElementNS(NS, 'circle'); ci.setAttribute('cx', p[0]); ci.setAttribute('cy', p[1]); ci.setAttribute('r', 15); ci.setAttribute('fill', LANE[i-1]); ci.setAttribute('stroke', '#fff'); ci.setAttribute('stroke-width', 2.5); g.appendChild(ci);
+    var tx = document.createElementNS(NS, 'text'); tx.setAttribute('x', p[0]); tx.setAttribute('y', p[1]+6); tx.setAttribute('text-anchor', 'middle'); tx.setAttribute('font-size', 17); tx.setAttribute('font-weight', 700); tx.setAttribute('fill', '#fff'); tx.textContent = String(i); g.appendChild(tx); }
+  uniqMarkers(wrap, 'C');
+}
+function cmpTick(ts){
+  var c = cardById(CM.plan); if(!c) return;
+  if(!CM.last) CM.last = ts; var dt = (ts-CM.last)/1000; CM.last = ts;
+  CM.t += dt * (CM.slow ? 0.5 : 1); var D = duration(c);
+  if(CM.t >= D){ CM.t = D; frame(c, D, $('cmpCourt'), $('cmpCap'), $('cmpTl')); cmpStopAnim(); return; }
+  frame(c, CM.t, $('cmpCourt'), $('cmpCap'), $('cmpTl')); CM.raf = requestAnimationFrame(cmpTick);
+}
+function cmpPlayAnim(){ var c = cardById(CM.plan); if(!c) return; if(CM.t >= duration(c)) CM.t = 0; CM.playing = true; CM.last = 0; $('cmpPlay').textContent = '❚❚ 止める'; CM.raf = requestAnimationFrame(cmpTick); }
+function cmpStopAnim(){ cancelAnimationFrame(CM.raf); CM.raf = 0; CM.playing = false; $('cmpPlay').textContent = '▶ アニメ'; }
+$('cmpPlay').addEventListener('click', function(){ if(CM.playing) cmpStopAnim(); else cmpPlayAnim(); });
+$('cmpReplay').addEventListener('click', function(){ cmpStopAnim(); CM.t = 0; cmpPlayAnim(); });
+$('cmpSlow').addEventListener('click', function(){ CM.slow = !CM.slow; $('cmpSlow').classList.toggle('on', CM.slow); $('cmpSlow').setAttribute('aria-pressed', String(CM.slow)); $('cmpSlow').textContent = CM.slow ? '✓ ゆっくり' : 'ゆっくり'; });
 
 /* teacher: videos */
 function renderVidStat(){
@@ -1390,6 +1707,7 @@ function renderVidStat(){
   listVideos(null).then(function(l){
     var size = l.reduce(function(a,r){ return a + (r.size||0); }, 0);
     s.textContent = l.length ? 'この端末に '+l.length+'本（'+(size<1e6?'':'約')+mb(size)+'）あります。' : 'この端末に 動画は ありません。';
+    listNotes(null).then(function(n){ if(n.length) s.textContent += ' 書き込み画像：'+n.length+'枚。'; }).catch(function(){});
     if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(function(e){ if(e.quota) s.textContent += ' 使える残りの容量：約'+mb(e.quota-(e.usage||0)); }).catch(function(){});
   }).catch(function(){ s.textContent = '動画の保存場所を開けませんでした（このブラウザでは動画を保存できないかもしれません）。'; });
 }
