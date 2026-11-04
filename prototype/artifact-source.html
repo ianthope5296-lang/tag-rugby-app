@@ -1,0 +1,1052 @@
+<title>トライさくせんボード</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap">
+<style>
+/* Layout: one-screen app. Board view = court (left) + tool panel (right); stacks on narrow screens. */
+:root{
+  --bg:#f3f5f1; --surface:#ffffff; --surface-2:#eef1ec; --fg:#1b201c; --muted:#56605a; --line:#cbd3cc;
+  --accent:#1f5fae; --accent-fg:#ffffff; --warm:#c55a11; --warm-fg:#ffffff; --danger:#b42318;
+  --field:#cfe3b8; --field-ink:#26352a; --try:#f3d29f; --bench:#e6e9e3; --pass:#d6336c; --defender:#3d4440;
+  --font:'BIZ UDPGothic','Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131714; --surface:#1c221e; --surface-2:#252c27; --fg:#edf1ed; --muted:#aab4ac; --line:#3a453d;
+  --accent:#86b5f2; --accent-fg:#0b1a2c; --warm:#f2a46a; --warm-fg:#2a1405; --danger:#ff8f80;
+  --field:#2f4629; --field-ink:#dce8d6; --try:#6c5527; --bench:#232a25; --pass:#ff7eab; --defender:#c9d0cb;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131714; --surface:#1c221e; --surface-2:#252c27; --fg:#edf1ed; --muted:#aab4ac; --line:#3a453d;
+  --accent:#86b5f2; --accent-fg:#0b1a2c; --warm:#f2a46a; --warm-fg:#2a1405; --danger:#ff8f80;
+  --field:#2f4629; --field-ink:#dce8d6; --try:#6c5527; --bench:#232a25; --pass:#ff7eab; --defender:#c9d0cb;
+  color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0;
+  -webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.app{max-width:1400px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+header.bar{display:flex;align-items:center;gap:12px;padding-block:12px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:20px;letter-spacing:.04em;display:flex;align-items:center;gap:8px}
+.brand svg{flex:none}
+.crumb{color:var(--muted);font-size:15px;min-width:0}
+.bar .spacer{flex:1}
+.btn{min-height:44px;padding:8px 16px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.warm{background:var(--warm);color:var(--warm-fg);border-color:var(--warm)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--danger);border-color:var(--danger);background:transparent}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.view{flex:1;padding-bottom:24px}
+.note{background:var(--surface-2);border:1px dashed var(--line);border-radius:10px;padding:10px 14px;color:var(--muted);font-size:14px}
+h1,h2,h3{text-wrap:balance;margin:0}
+h2{font-size:22px}
+h3{font-size:17px}
+
+/* home */
+.home{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:8px}
+.tile{min-height:170px;border-radius:18px;border:2px solid var(--line);background:var(--surface);padding:20px;text-align:left;
+  display:flex;flex-direction:column;gap:8px;justify-content:flex-end}
+.tile .big{font-size:30px;font-weight:700}
+.tile .sub{color:var(--muted);font-size:15px}
+.tile.main{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.tile.main .sub{color:inherit;opacity:.85}
+.tile[disabled]{opacity:.55;cursor:not-allowed}
+
+/* teams */
+.teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:12px}
+.team-btn{border-radius:16px;border:2px solid var(--line);background:var(--surface);padding:16px;text-align:left;display:flex;flex-direction:column;gap:10px;min-height:120px}
+.team-name{font-size:24px;font-weight:700;display:flex;align-items:center;gap:10px}
+.dot{width:22px;height:22px;border-radius:50%;flex:none;border:2px solid rgba(0,0,0,.15)}
+.members{color:var(--muted);font-size:14px}
+
+/* board */
+.board{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.court-col{flex:1 1 380px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:8px}
+.court-wrap{position:relative;width:min(100%, calc((100vh - 150px) * 400 / 560));aspect-ratio:400/560;max-width:100%;
+  touch-action:none;user-select:none;-webkit-user-select:none;border-radius:8px;overflow:hidden;border:2px solid var(--field-ink)}
+.court-wrap svg.court,.court-wrap svg.ink{position:absolute;inset:0;width:100%;height:100%}
+.court-wrap svg.ink{pointer-events:none}
+.court-wrap.pen{cursor:crosshair}
+.tok{position:absolute;transform:translate(-50%,-50%);min-width:58px;min-height:50px;padding:5px 9px;border-radius:14px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:14px;line-height:1.15;color:#fff;
+  box-shadow:0 2px 0 rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.85);white-space:nowrap;touch-action:none;cursor:grab;z-index:2}
+.tok .n2{font-size:13px;font-weight:400}
+.tok .slot{position:absolute;top:-9px;left:-9px;width:22px;height:22px;border-radius:50%;background:#fff;color:#1b201c;font-size:12px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;border:2px solid currentColor}
+.tok.def{background:var(--defender);color:var(--bg);border-color:var(--bg);min-height:40px}
+.tok.dragging{cursor:grabbing;z-index:5;box-shadow:0 6px 14px rgba(0,0,0,.35)}
+.ball{position:absolute;width:38px;height:28px;transform:translate(-50%,-50%);z-index:4;touch-action:none;cursor:grab;filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
+.ball svg{display:block;width:100%;height:100%}
+.ball.ghost{opacity:.45}
+.person{position:absolute;width:62px;height:80px;transform:translate(-50%,-62%);z-index:2;pointer-events:none}
+.anim .court-wrap svg.ink{z-index:1}
+.ball{z-index:1000}
+.tok.dragging{z-index:2000 !important}
+.bubble{z-index:3000}
+.anim-legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:14px;color:var(--muted);align-items:center}
+.anim-legend span{display:inline-flex;align-items:center;gap:6px}
+.person svg{display:block;width:100%;height:100%}
+.person .pname{position:absolute;left:50%;top:100%;transform:translateX(-50%);background:var(--surface);color:var(--fg);border:1px solid var(--line);
+  border-radius:8px;padding:0 6px;font-size:12px;font-weight:700;white-space:nowrap}
+.bubble{position:absolute;transform:translate(-50%,-100%);background:#ffffff;color:#1b201c;border:2.5px solid #1b201c;border-radius:14px;
+  padding:4px 10px;font-size:15px;font-weight:700;white-space:nowrap;z-index:6;pointer-events:none}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);border:8px solid transparent;border-top-color:#1b201c;border-bottom:0}
+.anim .tok,.anim .ball{cursor:default}
+.panel{flex:1 1 300px;min-width:0;max-width:520px;display:flex;flex-direction:column;gap:14px}
+.card-slot{border:3px dashed var(--line);border-radius:14px;padding:12px 14px;min-height:96px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
+.card-slot.filled{border-style:solid}
+.card-slot .cname{font-size:24px;font-weight:700;display:flex;align-items:center;gap:8px}
+.badge{width:30px;height:30px;border-radius:50%;color:#fff;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none;font-size:16px}
+.card-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.card-pick{border-radius:12px;border:2px solid var(--line);background:var(--surface);padding:8px 10px;min-height:52px;font-weight:700;display:flex;align-items:center;gap:8px;text-align:left}
+.card-pick[aria-pressed="true"]{border-width:3px}
+.group{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.assign{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.assign label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700;min-width:0}
+.assign .lane-tag{border-radius:8px;color:#fff;text-align:center;padding:2px 0}
+select{min-height:44px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);padding:4px 6px;width:100%;min-width:0}
+.saved-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow:auto}
+.saved-item{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:14px}
+.saved-item .grow{flex:1;min-width:0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);align-items:center}
+
+/* anim */
+.caption{min-height:64px;font-size:24px;font-weight:700;text-align:center;padding:8px 12px;border-radius:12px;background:var(--surface);border:2px solid var(--line);width:min(100%,560px);display:flex;align-items:center;justify-content:center}
+.timeline{width:min(100%,560px);height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.timeline i{display:block;height:100%;width:0;background:var(--accent)}
+
+/* teacher */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:8px}
+textarea{width:100%;min-height:150px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px;font-size:15px}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
+th{background:var(--surface-2);font-size:13px}
+td input{width:100%;min-height:40px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;background:var(--surface)}
+td select{min-height:40px}
+.pin-box{max-width:360px;margin:40px auto;display:flex;flex-direction:column;gap:12px}
+.pin-box input{min-height:56px;font-size:28px;text-align:center;letter-spacing:.4em;border-radius:12px;border:2px solid var(--line);background:var(--surface)}
+.msg{font-size:14px;color:var(--muted)}
+.msg.err{color:var(--danger)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);
+  padding:10px 18px;border-radius:12px;font-weight:700;z-index:50}
+.radio{display:flex;gap:16px;flex-wrap:wrap}
+.radio label{display:flex;gap:6px;align-items:center;min-height:44px}
+@media (max-width:640px){ .assign{grid-template-columns:repeat(3,minmax(0,1fr))} .tile{min-height:120px} }
+@media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto} }
+</style>
+
+<div class="app">
+  <header class="bar">
+    <button class="btn ghost" id="backBtn" type="button" hidden aria-label="もどる">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>もどる
+    </button>
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="16" cy="16" rx="13" ry="8.5" transform="rotate(-35 16 16)" fill="#d6336c" stroke="currentColor" stroke-width="1.5"></ellipse><path d="M10 20l12-8" stroke="#fff" stroke-width="2"></path></svg>
+      トライさくせんボード
+    </div>
+    <span class="crumb" id="crumb"></span>
+    <span class="spacer"></span>
+    <span class="msg" id="sampleFlag" hidden>お試し用の名簿（架空の名前）が入っています</span>
+  </header>
+
+  <!-- HOME -->
+  <section class="view" id="v-home">
+    <div class="home">
+      <button class="tile main" type="button" id="goTeams"><span class="big">チームで つかう</span><span class="sub">さくせんボード・さくせんアニメ</span></button>
+      <button class="tile" type="button" disabled><span class="big">学習カード</span><span class="sub">試作4で つくります</span></button>
+      <button class="tile" type="button" id="goPin"><span class="big">先生</span><span class="sub">名簿の登録・表示の設定・データの書き出し</span></button>
+    </div>
+    <p class="note" style="margin-top:16px">データは この端末の ブラウザの中にだけ 保存されます。ほかの端末や インターネットには 送られません。</p>
+  </section>
+
+  <!-- TEAMS -->
+  <section class="view" id="v-teams" hidden>
+    <h2>じぶんの チームを えらぼう</h2>
+    <div class="teams" id="teamList"></div>
+  </section>
+
+  <!-- BOARD -->
+  <section class="view" id="v-board" hidden>
+    <div class="board">
+      <div class="court-col">
+        <div class="court-wrap" id="boardCourt"></div>
+        <div class="legend">
+          <span>●名前のコマ・まもりのコマ・◆ボールを ゆびで うごかせます</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="card-slot" id="cardSlot"></div>
+        <div class="group">
+          <h3>さくせんカードを えらぶ</h3>
+          <div class="card-list" id="cardList"></div>
+        </div>
+        <div class="group">
+          <h3>だれが どこに 立つ？</h3>
+          <div class="assign" id="assign"></div>
+          <div class="row">
+            <button class="btn" type="button" id="toStart">スタートに ならべる</button>
+            <button class="btn warm" type="button" id="toPlay">さくせんの 形に ならべる</button>
+          </div>
+        </div>
+        <div class="group">
+          <h3>線を かく</h3>
+          <div class="row" role="group" aria-label="線の しゅるい">
+            <button class="btn on" type="button" data-mode="move" id="mMove">うごかす</button>
+            <button class="btn" type="button" data-mode="run" id="mRun">走る（せん）</button>
+            <button class="btn" type="button" data-mode="pass" id="mPass">パス（てんせん）</button>
+            <button class="btn" type="button" data-mode="fake" id="mFake">ふり</button>
+            <button class="btn ghost" type="button" id="undoLine">1本 けす</button>
+            <button class="btn danger" type="button" id="clearLines">ぜんぶ けす</button>
+          </div>
+          <p class="msg">けせるのは じぶんたちで かいた 線だけです。お手本の 線は のこります。</p>
+        </div>
+        <div class="group">
+          <h3>オリジナル さくせんを つくる</h3>
+          <div class="row">
+            <button class="btn" type="button" id="blankBtn">まっさらから つくる</button>
+            <button class="btn" type="button" id="baseToggle" aria-pressed="true">お手本の 線を かくす</button>
+          </div>
+          <div class="row">
+            <label for="origName" class="msg" style="width:100%">さくせんの 名前</label>
+            <input id="origName" type="text" maxlength="20" placeholder="れい：いなずまスペシャル" style="flex:1 1 180px;min-width:0;min-height:44px;border:1.5px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--surface)">
+            <button class="btn warm" type="button" id="saveOrig">オリジナルとして ほぞん</button>
+          </div>
+          <div class="saved-list" id="origList"></div>
+        </div>
+        <div class="group">
+          <h3>今日の さくせんを ほぞん</h3>
+          <div class="row">
+            <select id="period" style="width:auto" aria-label="何時間目か"></select>
+            <button class="btn primary" type="button" id="saveBoard">ほぞんする</button>
+          </div>
+          <div class="saved-list" id="savedList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANIMATION -->
+  <section class="view" id="v-anim" hidden>
+    <div class="board anim">
+      <div class="court-col">
+        <div class="caption" id="caption" aria-live="polite">▶ を おして スタート</div>
+        <div class="court-wrap" id="animCourt"></div>
+        <div class="timeline"><i id="tl"></i></div>
+        <div class="anim-legend" aria-label="やじるしの いみ">
+          <span><svg width="34" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="currentColor" stroke-width="3"/><path d="M24 1L33 5L24 9z" fill="currentColor"/></svg>走る</span>
+          <span><svg width="34" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="var(--pass)" stroke-width="3" stroke-dasharray="5 4"/><path d="M24 1L33 5L24 9z" fill="var(--pass)"/></svg>パス</span>
+          <span><svg width="34" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="#8a8a8a" stroke-width="3" stroke-dasharray="2 4"/><path d="M24 1L33 5L24 9z" fill="#8a8a8a"/></svg>ふり</span>
+          <span>止まっている ときは、やじるしで 動きが 見えます</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="card-slot filled" id="animCard"></div>
+        <div class="group">
+          <div class="row">
+            <button class="btn primary" type="button" id="playBtn">▶ さいせい</button>
+            <button class="btn" type="button" id="replayBtn">もう一回</button>
+            <button class="btn" type="button" id="slowBtn" aria-pressed="false">ゆっくり</button>
+          </div>
+          <div class="row">
+            <button class="btn on" type="button" id="showNum">番号で 見る</button>
+            <button class="btn" type="button" id="showName">名前で 見る</button>
+          </div>
+        </div>
+        <div class="group">
+          <h3>ほかの さくせん</h3>
+          <div class="card-list" id="animCardList"></div>
+        </div>
+        <button class="btn warm" type="button" id="useThis">この さくせんを ボードに はる</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PIN -->
+  <section class="view" id="v-pin" hidden>
+    <form class="pin-box" id="pinForm">
+      <h2>先生メニュー</h2>
+      <label for="pinIn" class="msg">合言葉（数字4けた）を 入れてください。試作では「0000」です。</label>
+      <input id="pinIn" type="password" inputmode="numeric" autocomplete="off" maxlength="8">
+      <button class="btn primary" type="submit">入る</button>
+      <p class="msg err" id="pinMsg" hidden>合言葉が ちがいます</p>
+    </form>
+  </section>
+
+  <!-- TEACHER -->
+  <section class="view" id="v-teacher" hidden>
+    <div class="tgrid">
+      <div class="group">
+        <h2>名簿の登録</h2>
+        <p class="msg">Excelで「番号・名字・名前・チーム」の4列をえらんでコピーし、下に貼り付けます。CSVファイルも読み込めます。1行目が見出しでも大丈夫です。</p>
+        <textarea id="rosterIn" placeholder="1&#9;青木&#9;はると&#9;いなずま&#10;2&#9;石田&#9;ゆい&#9;いなずま"></textarea>
+        <div class="row">
+          <button class="btn primary" type="button" id="parseRoster">読み取る</button>
+          <label class="btn" for="csvIn">CSVファイルを えらぶ</label>
+          <input id="csvIn" type="file" accept=".csv,.txt,text/csv,text/plain" hidden>
+        </div>
+        <p class="msg" id="parseMsg"></p>
+      </div>
+      <div class="group">
+        <h2>表示の設定</h2>
+        <div class="radio" role="radiogroup" aria-label="名前の出し方">
+          <label><input type="radio" name="nameMode" value="full" id="nmFull"> 本名（名字と名前）</label>
+          <label><input type="radio" name="nameMode" value="sei" id="nmSei"> 名字だけ</label>
+        </div>
+        <p class="msg">名字だけのとき、同じ名字の子がいれば名前の1文字目を付けます（例：佐藤 こ）。</p>
+        <h2 style="margin-top:8px">データ</h2>
+        <p class="msg">名簿と保存した作戦をファイルにします。ほかの端末に写すときや、データが消えたときの読み込み直しに使います。</p>
+        <div class="row">
+          <button class="btn" type="button" id="exportBtn">ファイルに書き出す</button>
+          <label class="btn" for="importIn">ファイルを読み込む</label>
+          <input id="importIn" type="file" accept=".json,application/json" hidden>
+        </div>
+        <div id="exportFallback" hidden>
+          <p class="msg">ファイルを保存できなかったので、内容を表示します。コピーして保管してください。</p>
+          <textarea id="exportText" readonly></textarea>
+          <button class="btn" type="button" id="copyExport">コピーする</button>
+        </div>
+        <p class="msg" id="dataMsg"></p>
+      </div>
+    </div>
+    <div class="group" style="margin-top:16px">
+      <div class="row"><h2>チームと メンバーの 確認</h2><span class="spacer" style="flex:1"></span>
+        <button class="btn" type="button" id="addMember">メンバーを足す</button>
+        <button class="btn primary" type="button" id="saveRoster">この名簿で保存する</button></div>
+      <div id="teamEdit" class="row"></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th style="width:70px">番号</th><th>名字</th><th>名前</th><th style="width:170px">チーム</th><th style="width:70px"></th></tr></thead>
+        <tbody id="memberRows"></tbody>
+      </table></div>
+      <p class="msg" id="rosterMsg"></p>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+'use strict';
+/* ---------- constants ---------- */
+var LANE = ['#c0392b','#1f5fae','#0f7a5a','#8e44ad'];
+var TEAM_COLORS = [['あお','#2563a8'],['あか','#c0392b'],['みどり','#1e7a46'],['オレンジ','#c45b0c'],['むらさき','#7b3fa6'],['ちゃ','#7a5a12'],['ピンク','#b8326e'],['こん','#33415c']];
+var W = 400, H = 560, START_Y = 452, BENCH_Y = 522;
+var LANE_X = [50,150,250,350];
+var KEY = 'tryapp.v1';
+
+/* plays: actors 1-4 and d1,d2 waypoints [t,x,y]; passes {t0,t1,to}; carrier = first holder */
+var CARDS = [
+ {id:'cross', no:1, name:'クロス', color:'#c55a11',
+  desc:'ボールを持った ②と、となりの ③が ×の形に 走る。すれちがう ときに ②から ③へ パス！',
+  carrier:2,
+  path:{1:[[0,50,421],[1.6,50,370]],2:[[0,150,310],[0.6,150,310],[2,186,256],[4,283,107]],
+        3:[[0,250,393],[0.6,250,393],[2,214,284],[4,120,114],[4.6,110,40]],4:[[0,350,421],[1.6,350,370]],
+        d1:[[0,150,110],[0.6,150,140],[2,214,196],[3,262,160]], d2:[[0,260,110],[0.6,260,140],[2,286,186],[3,300,150]]},
+  passes:[{t0:1.9,t1:2.2,to:3}],
+  caps:[[0,'②が ボールを もって スタート'],[0.8,'②と ③が ×の形に 走る'],[1.85,'すれちがう ときに パス！'],[2.6,'まもりは ②を おいかけている'],[4.1,'③が トライ！']]},
+ {id:'fake', no:2, name:'クロスのふり', color:'#11756b',
+  desc:'クロスと 同じように ②と ③が 走るけれど、パスは しない！ ②が そのまま 走りぬける。',
+  carrier:2,
+  path:{1:[[0,50,421],[1.6,50,370]],2:[[0,150,310],[0.6,150,310],[2,186,256],[3.2,250,150],[4.4,262,40]],
+        3:[[0,250,393],[0.6,250,393],[2,214,284],[3.6,120,114]],4:[[0,350,421],[1.6,350,370]],
+        d1:[[0,150,110],[0.6,150,140],[2,192,232],[3,140,175]], d2:[[0,260,110],[0.6,260,140],[2,222,232],[3,160,205]]},
+  passes:[],
+  fakes:[{t0:1.7,t1:2.4,from:2,to:3}],
+  bubbles:[[1.6,2.3,'2','③に パス…'],[2.0,2.9,'d2','③だ！'],[2.3,3.0,'2','しない！']],
+  caps:[[0,'②が ボールを もって スタート'],[0.8,'クロスの ように 走る'],[1.7,'②は ③に パスする ふり'],[2.4,'まもりが ③に つられた！'],[3.7,'②が そのまま トライ！']]},
+ {id:'skip', no:3, name:'とばしパス', color:'#3b4cc0',
+  desc:'②は となりの ③を とばして、その となりの ④に パス！ ④は 前へ 走る。',
+  carrier:2,
+  path:{1:[[0,50,366],[1.6,50,320]],2:[[0,150,255],[0.6,150,255],[1.6,150,215],[2.2,150,200]],
+        3:[[0,250,329],[0.6,250,329],[1.6,250,290],[2.8,250,240]],4:[[0,350,403],[0.6,350,403],[1.6,350,360],[2.4,350,330],[4.2,350,40]],
+        d1:[[0,150,110],[0.6,150,140],[1.6,150,180],[2.4,232,222]], d2:[[0,260,110],[0.6,260,140],[2,252,210],[2.8,292,222],[3.4,322,190]]},
+  passes:[{t0:1.6,t1:2.4,to:4}],
+  caps:[[0,'ななめに ならんで スタート'],[0.7,'みんなで 前へ'],[1.6,'③を とばして ④に パス！'],[2.6,'④が あいている ところを 走る'],[3.8,'④が トライ！']]},
+ {id:'reverse', no:4, name:'ぎゃくに！', color:'#a8326e',
+  desc:'③は ④に パスする ふりを する。そして はんたいがわの ②に パス！ ②は 前へ 走る。',
+  carrier:3,
+  path:{1:[[0,50,421],[1.6,50,380]],2:[[0,150,366],[0.6,150,366],[1.6,150,330],[3.3,150,322],[3.9,150,300],[5.4,150,40]],
+        3:[[0,250,274],[0.6,250,274],[1.6,250,240],[3.4,250,232]],4:[[0,350,366],[0.6,350,366],[1.6,350,330],[3.0,350,320]],
+        d1:[[0,150,110],[0.6,150,140],[1.6,200,160],[2.8,296,172],[3.9,240,200],[4.6,190,190]], d2:[[0,260,110],[0.6,260,140],[1.6,322,160],[2.8,348,222]]},
+  passes:[{t0:3.3,t1:3.9,to:2}],
+  fakes:[{t0:1.6,t1:2.8,from:3,to:4}],
+  bubbles:[[1.6,2.4,'3','④に パス するよ〜'],[2.4,3.1,'d2','④だ！'],[2.9,3.5,'3','…と みせかけて'],[3.7,4.4,'2','きた！']],
+  caps:[[0,'③が 前、②と ④が ななめ後ろ'],[1.6,'③は ④に パスする ふり'],[2.2,'まもりが ④の 方へ つられた'],[2.9,'ぎゃくの ②に パス！'],[3.9,'②が あいている ところを 走る'],[5,'②が トライ！']]},
+ {id:'loop', no:5, name:'回転', color:'#7a5a12',
+  desc:'1かいめ：②が ③に パス。②は ③の うしろを 回って 外がわへ。2かいめ：③から もう一回 ②に パス！',
+  carrier:2,
+  path:{1:[[0,50,432],[1.6,50,390]],
+        2:[[0,150,274],[0.6,150,274],[1.2,162,252],[1.6,184,270],[2.0,212,312],[2.4,258,326],[2.8,296,298],[3.1,306,264],[3.5,310,234],[5,314,40]],
+        3:[[0,250,357],[0.6,250,357],[1.2,240,322],[1.6,233,300],[2.4,232,268],[3.1,236,240],[3.6,240,228]],
+        4:[[0,370,432],[1.6,370,400]],
+        d1:[[0,150,110],[0.6,150,140],[1.4,176,200],[2.4,214,212],[3.2,240,196]], d2:[[0,260,110],[0.6,260,140],[2.0,254,196],[3.0,266,200],[3.8,300,186]]},
+  passes:[{t0:1.2,t1:1.6,to:3},{t0:3.1,t1:3.5,to:2}],
+  bubbles:[[2.8,3.4,'3','もう一回！']],
+  caps:[[0,'②が ボールを もって スタート'],[1.2,'1かいめ：③に パス'],[1.6,'②は ③の すぐ うしろを 回る'],[3.1,'2かいめ：もう一回 ②に パス！'],[3.8,'外がわを 走って トライ！']]}
+];
+/* simple teaching arrows for each card (like the paper cards): straight, or one gentle bend */
+var PLANS = {
+  cross:  [{type:'run',pts:[[150,300],[280,110]]},{type:'run',pts:[[250,380],[118,70]]},{type:'pass',pts:[[176,262],[214,276]]}],
+  fake:   [{type:'run',pts:[[250,380],[118,110]]},{type:'run',pts:[[150,300],[200,232],[262,50]]},{type:'fake',pts:[[178,258],[214,278]]}],
+  skip:   [{type:'pass',pts:[[160,206],[255,186],[342,320]]},{type:'run',pts:[[350,316],[350,56]]},{type:'run',pts:[[250,320],[250,250]]}],
+  reverse:[{type:'fake',pts:[[264,244],[326,300]]},{type:'pass',pts:[[238,244],[162,312]]},{type:'run',pts:[[150,306],[150,56]]}],
+  loop:   [{type:'pass',pts:[[166,250],[226,290]]},{type:'run',pts:[[170,262],[252,352],[306,268]]},{type:'pass',pts:[[244,240],[298,258]]},{type:'run',pts:[[312,244],[314,56]]}]
+};
+CARDS.forEach(function(c){ c.plan = PLANS[c.id] || []; });
+function cardById(id){ for(var i=0;i<CARDS.length;i++){ if(CARDS[i].id===id) return CARDS[i]; } return null; }
+
+var SAMPLE = {teams:[
+ {id:'t1',name:'いなずま',color:'#2563a8',members:[{id:'m1',no:1,sei:'青木',mei:'はると'},{id:'m2',no:2,sei:'石田',mei:'ゆい'},{id:'m3',no:3,sei:'上野',mei:'そうた'},{id:'m4',no:4,sei:'江口',mei:'みお'},{id:'m5',no:5,sei:'佐藤',mei:'りく'}]},
+ {id:'t2',name:'ひまわり',color:'#c45b0c',members:[{id:'m6',no:6,sei:'加藤',mei:'あおい'},{id:'m7',no:7,sei:'木村',mei:'れん'},{id:'m8',no:8,sei:'久保',mei:'ひな'},{id:'m9',no:9,sei:'小林',mei:'ゆうと'},{id:'m10',no:10,sei:'佐藤',mei:'こはる'}]}
+]};
+
+/* ---------- state ---------- */
+var S = load() || {roster:clone(SAMPLE), settings:{nameMode:'full', pin:'0000', sample:true}, boards:{}, saved:{}};
+if(!S.boards) S.boards = {}; if(!S.saved) S.saved = {}; if(!S.originals) S.originals = {}; if(!S.settings) S.settings = {nameMode:'full',pin:'0000',sample:true};
+var cur = {view:'home', teamId:null, anim:{card:'cross', t:0, playing:false, slow:false, names:false}, mode:'move', draft:null};
+
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function load(){ try{ var s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); return true; }catch(e){ toast('この端末に保存できませんでした'); return false; } }
+function $(id){ return document.getElementById(id); }
+function el(tag, attrs, text){ var e = document.createElement(tag); if(attrs){ for(var k in attrs){ if(k==='class') e.className = attrs[k]; else if(k==='style') e.style.cssText = attrs[k]; else e.setAttribute(k, attrs[k]); } } if(text!=null) e.textContent = text; return e; }
+var toastTimer;
+function toast(msg){ var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.hidden = true; }, 2200); }
+
+function team(id){ var ts = S.roster.teams; for(var i=0;i<ts.length;i++){ if(ts[i].id===id) return ts[i]; } return null; }
+function member(id){ var ts = S.roster.teams; for(var i=0;i<ts.length;i++){ for(var j=0;j<ts[i].members.length;j++){ if(ts[i].members[j].id===id) return ts[i].members[j]; } } return null; }
+var BALL_SVG = '<svg viewBox="0 0 38 28" aria-hidden="true"><g transform="rotate(-22 19 14)"><ellipse cx="19" cy="14" rx="16" ry="10" fill="#e0457b" stroke="#ffffff" stroke-width="2"/>'+
+  '<path d="M6 14Q19 8 32 14" fill="none" stroke="#ffffff" stroke-width="1.6"/><path d="M15 9.6v3.6M19 9v3.6M23 9.6v3.6" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round"/></g></svg>';
+function nameParts(m){
+  if(!m) return ['',''];
+  if(S.settings.nameMode !== 'sei') return [m.sei, m.mei||''];
+  var dup = 0; S.roster.teams.forEach(function(t){ t.members.forEach(function(x){ if(x.sei===m.sei) dup++; }); });
+  return [m.sei, dup > 1 && m.mei ? m.mei.charAt(0) : ''];
+}
+function personSVG(color, label){
+  var skin = '#f7d9c0', pants = '#2f3b52';
+  return '<svg viewBox="0 0 46 62" aria-hidden="true" overflow="visible"><g class="bod">'+
+    '<g class="legL"><path d="M18.5 44V57" stroke="'+pants+'" stroke-width="6" stroke-linecap="round"/><ellipse cx="17.5" cy="58.5" rx="4.5" ry="2.6" fill="#ffffff" stroke="#555" stroke-width="1"/></g>'+
+    '<g class="legR"><path d="M27.5 44V57" stroke="'+pants+'" stroke-width="6" stroke-linecap="round"/><ellipse cx="28.5" cy="58.5" rx="4.5" ry="2.6" fill="#ffffff" stroke="#555" stroke-width="1"/></g>'+
+    '<rect x="12" y="22" width="22" height="24" rx="8" fill="'+color+'" stroke="#ffffff" stroke-width="1.5"/>'+
+    '<text x="23" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff" font-family="BIZ UDPGothic,sans-serif">'+label+'</text>'+
+    '<g class="armL"><path class="a" d="M13 26L13 39" fill="none" stroke="'+color+'" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle class="h" cx="13" cy="41" r="3.2" fill="'+skin+'" stroke="#9a7a66" stroke-width=".8"/></g>'+
+    '<g class="armR"><path class="a" d="M33 26L33 39" fill="none" stroke="'+color+'" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle class="h" cx="33" cy="41" r="3.2" fill="'+skin+'" stroke="#9a7a66" stroke-width=".8"/></g>'+
+    '<circle cx="23" cy="12" r="10.5" fill="'+skin+'" stroke="#9a7a66" stroke-width="1"/>'+
+    '<path d="M12.5 11.5Q13 1 23 1.5Q33 1 33.5 11.5Q29 6 23 6.5Q17 6 12.5 11.5Z" fill="#3b2a20"/>'+
+    '<circle cx="19.2" cy="13" r="1.4" fill="#222"/><circle cx="26.8" cy="13" r="1.4" fill="#222"/>'+
+    '<path d="M20.5 17Q23 18.8 25.5 17" fill="none" stroke="#a0524a" stroke-width="1.2" stroke-linecap="round"/>'+
+    '</g></svg>';
+}
+function displayName(m){
+  if(!m) return '';
+  if(S.settings.nameMode !== 'sei') return m.sei + (m.mei ? ' ' + m.mei : '');
+  var dup = 0; S.roster.teams.forEach(function(t){ t.members.forEach(function(x){ if(x.sei===m.sei) dup++; }); });
+  return dup > 1 && m.mei ? m.sei + ' ' + m.mei.charAt(0) : m.sei;
+}
+
+/* ---------- navigation ---------- */
+var BACK = {teams:'home', board:'teams', anim:'board', pin:'home', teacher:'home'};
+function show(v){
+  stopAnim();
+  cur.view = v;
+  ['home','teams','board','anim','pin','teacher'].forEach(function(n){ $('v-'+n).hidden = (n!==v); });
+  $('backBtn').hidden = (v==='home');
+  var t = cur.teamId ? team(cur.teamId) : null;
+  var crumbs = {home:'', teams:'チームを えらぶ', board: t ? 'チーム「'+t.name+'」の さくせんボード' : '', anim:'さくせんアニメ', pin:'先生メニュー', teacher:'先生メニュー'};
+  $('crumb').textContent = crumbs[v] || '';
+  $('sampleFlag').hidden = !S.settings.sample;
+  if(v==='teams') renderTeams();
+  if(v==='board') renderBoard();
+  if(v==='anim') renderAnim();
+  if(v==='teacher') renderTeacher();
+  if(v==='pin'){ $('pinIn').value=''; $('pinMsg').hidden = true; setTimeout(function(){ $('pinIn').focus(); }, 50); }
+  window.scrollTo(0,0);
+}
+$('backBtn').addEventListener('click', function(){ if(cur.view==='anim' && !cur.teamId){ show('teams'); return; } show(BACK[cur.view] || 'home'); });
+$('goTeams').addEventListener('click', function(){ show('teams'); });
+$('goPin').addEventListener('click', function(){ show('pin'); });
+
+/* ---------- teams ---------- */
+function renderTeams(){
+  var box = $('teamList'); box.textContent = '';
+  if(!S.roster.teams.length){ box.appendChild(el('p',{class:'note'},'チームが まだ ありません。先生メニューで 名簿を 登録してください。')); return; }
+  S.roster.teams.forEach(function(t){
+    var b = el('button',{class:'team-btn',type:'button'});
+    var n = el('span',{class:'team-name'}); var d = el('span',{class:'dot'}); d.style.background = t.color; n.appendChild(d); n.appendChild(document.createTextNode(t.name));
+    b.appendChild(n);
+    b.appendChild(el('span',{class:'members'}, t.members.map(displayName).join('・') + '（' + t.members.length + '人）'));
+    b.addEventListener('click', function(){ cur.teamId = t.id; show('board'); });
+    box.appendChild(b);
+  });
+}
+
+/* ---------- court drawing ---------- */
+function courtSVG(){
+  var s = '<svg class="court" viewBox="0 0 '+W+' '+H+'" aria-hidden="true">';
+  s += '<rect x="0" y="0" width="400" height="480" fill="var(--field)"/>';
+  s += '<rect x="0" y="0" width="400" height="60" fill="var(--try)"/>';
+  s += '<text x="200" y="40" text-anchor="middle" font-size="24" font-weight="700" fill="var(--field-ink)" font-family="var(--font)" letter-spacing="6">トライゾーン</text>';
+  s += '<path d="M0 60H400" stroke="var(--field-ink)" stroke-width="3"/>';
+  s += '<path d="M100 60V480M200 60V480M300 60V480" stroke="var(--field-ink)" stroke-width="1.5" stroke-dasharray="7 7" opacity=".7"/>';
+  s += '<path d="M0 110H400" stroke="var(--field-ink)" stroke-width="1.5" stroke-dasharray="3 6" opacity=".7"/>';
+  s += '<text x="394" y="128" text-anchor="end" font-size="12" fill="var(--field-ink)" font-family="var(--font)">まもりの スタート</text>';
+  for(var i=0;i<4;i++){
+    s += '<circle cx="'+LANE_X[i]+'" cy="'+(START_Y-1)+'" r="17" fill="'+LANE[i]+'" opacity=".28"/>';
+    s += '<text x="'+LANE_X[i]+'" y="'+(START_Y+7)+'" text-anchor="middle" font-size="20" font-weight="700" fill="'+LANE[i]+'" opacity=".6" font-family="var(--font)">'+(i+1)+'</text>';
+  }
+  s += '<rect x="0" y="480" width="400" height="80" fill="var(--bench)"/>';
+  s += '<path d="M0 480H400" stroke="var(--field-ink)" stroke-width="4"/>';
+  s += '<text x="200" y="552" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="var(--font)">コートの外（かんとく・ひかえ）</text>';
+  s += '</svg>';
+  s += '<svg class="ink" viewBox="0 0 '+W+' '+H+'" aria-hidden="true"><defs>'+
+       '<marker id="arRun" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--fg)"/></marker>'+
+       '<marker id="arPass" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--pass)"/></marker>'+
+       '<marker id="arFake" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L10 5L0 10z" fill="#8a8a8a"/></marker>'+
+       '</defs><g class="base"></g><g class="lines"></g></svg>';
+  return s;
+}
+function pct(x,y,node){ node.style.left = (x/W*100)+'%'; node.style.top = (y/H*100)+'%'; }
+
+/* ---------- board ---------- */
+function boardState(){
+  var t = team(cur.teamId); var b = S.boards[cur.teamId];
+  if(!b){ b = S.boards[cur.teamId] = {card:null, assign:{}, pos:{}, lines:[], holder:null, period:3}; defaultAssign(b,t); startPositions(b,t); }
+  // keep assign valid
+  ['1','2','3','4','k'].forEach(function(k){ if(b.assign[k] && !t.members.some(function(m){ return m.id===b.assign[k]; })) b.assign[k] = ''; });
+  t.members.forEach(function(m){ if(!b.pos[m.id]) b.pos[m.id] = [40, BENCH_Y]; });
+  return b;
+}
+function defaultAssign(b,t){ var ms = t.members; b.assign = {'1':ms[0]?ms[0].id:'','2':ms[1]?ms[1].id:'','3':ms[2]?ms[2].id:'','4':ms[3]?ms[3].id:'','k':ms[4]?ms[4].id:''}; }
+function slotOf(b, mid){ for(var k in b.assign){ if(b.assign[k]===mid && k!=='k') return k; } return null; }
+function placeBench(b,t){
+  var n = 0;
+  t.members.forEach(function(m){ if(!slotOf(b,m.id)){ b.pos[m.id] = [62 + (n % 4) * 92, n < 4 ? 508 : 540]; n++; } });
+}
+function startPositions(b,t){
+  for(var i=1;i<=4;i++){ var mid = b.assign[String(i)]; if(mid) b.pos[mid] = [LANE_X[i-1], START_Y]; }
+  placeBench(b,t);
+  b.pos.d1 = [150,110]; b.pos.d2 = [260,110];
+  var c = b.card ? cardById(b.card) : null; var hs = String(c ? c.carrier : 2);
+  b.holder = b.assign[hs] || null; b.pos.ball = b.holder ? b.pos[b.holder].slice() : [200,300];
+}
+function playPositions(b,t){
+  var c = cardById(b.card); if(!c) return;
+  for(var i=1;i<=4;i++){ var mid = b.assign[String(i)]; if(mid){ var p = c.path[i][0]; b.pos[mid] = [p[1],p[2]]; } }
+  placeBench(b,t);
+  b.pos.d1 = [c.path.d1[0][1], c.path.d1[0][2]]; b.pos.d2 = [c.path.d2[0][1], c.path.d2[0][2]];
+  b.holder = b.assign[String(c.carrier)] || null; b.pos.ball = b.holder ? b.pos[b.holder].slice() : [200,300];
+}
+
+function renderBoard(){
+  var t = team(cur.teamId); if(!t){ show('teams'); return; }
+  var b = boardState();
+  renderCardSlot(b); renderCardList(b); renderAssign(b,t); renderPeriod(b); renderSaved();
+  var wrap = $('boardCourt'); wrap.innerHTML = courtSVG();
+  drawBase(wrap, b); drawLines(wrap, b.lines); renderOrig(b);
+  t.members.forEach(function(m){
+    var tk = el('div',{class:'tok', role:'button', 'aria-label':displayName(m)+' のコマ', tabindex:'0'});
+    tk.style.background = t.color;
+    var s = slotOf(b,m.id);
+    if(s){ var sl = el('span',{class:'slot'}, s); sl.style.color = LANE[+s-1]; tk.appendChild(sl); }
+    else if(b.assign.k===m.id){ var sk = el('span',{class:'slot'},'監'); sk.style.color = '#3d4440'; tk.appendChild(sk); }
+    var np = nameParts(m); tk.appendChild(el('span',{}, np[0])); if(np[1]) tk.appendChild(el('span',{class:'n2'}, np[1]));
+    tk.dataset.key = m.id; pct(b.pos[m.id][0], b.pos[m.id][1], tk); tk.style.zIndex = String(10 + Math.round(b.pos[m.id][1]));
+    wrap.appendChild(tk); makeDraggable(tk, wrap);
+  });
+  ['d1','d2'].forEach(function(k,i){
+    var d = el('div',{class:'tok def', role:'button', 'aria-label':'まもり'+(i+1)+' のコマ', tabindex:'0'}, 'まもり');
+    d.dataset.key = k; pct(b.pos[k][0], b.pos[k][1], d); d.style.zIndex = String(10 + Math.round(b.pos[k][1])); wrap.appendChild(d); makeDraggable(d, wrap);
+  });
+  var ball = el('div',{class:'ball', role:'button', 'aria-label':'ボール', tabindex:'0'}); ball.innerHTML = BALL_SVG;
+  ball.dataset.key = 'ball'; var bp = ballPos(b); pct(bp[0], bp[1], ball); wrap.appendChild(ball); makeDraggable(ball, wrap);
+  wrap.classList.toggle('pen', cur.mode!=='move');
+}
+function ballPos(b){ if(b.holder && b.pos[b.holder]) return [b.pos[b.holder][0]+24, b.pos[b.holder][1]-18]; return b.pos.ball; }
+
+function renderCardSlot(b){
+  var slot = $('cardSlot'); slot.textContent = ''; slot.style.borderColor = '';
+  var c = b.card ? cardById(b.card) : null;
+  slot.classList.toggle('filled', !!c || !!b.origId);
+  if(b.origId || b.blank){
+    var on = el('div',{class:'cname'}); var st = el('span',{class:'badge'},'★'); st.style.background = '#33415c'; on.appendChild(st);
+    on.appendChild(document.createTextNode(b.origName || 'オリジナル さくせん（つくっている ところ）')); slot.appendChild(on);
+    slot.style.borderColor = '#33415c';
+    slot.appendChild(el('div',{}, c ? 'もとに した さくせん：' + c.name + '（お手本の 線は けせません）' : 'まっさらから つくった さくせん'));
+    slot.appendChild(el('div',{class:'msg'},'オリジナルは 線で 動きを 見ます。'));
+    if(c){ var r0 = el('div',{class:'row'}); var a0 = el('button',{class:'btn',type:'button'},'▶ もとの さくせんの アニメ'); a0.addEventListener('click', function(){ cur.anim.card = c.id; show('anim'); }); r0.appendChild(a0); slot.appendChild(r0); }
+    return;
+  }
+  if(!c){ slot.appendChild(el('div',{class:'cname'},'ここに さくせんカードを はろう')); slot.appendChild(el('div',{class:'msg'},'下の 5まいから えらぶと ここに はられます')); return; }
+  slot.style.borderColor = c.color;
+  var n = el('div',{class:'cname'}); var bd = el('span',{class:'badge'}, String(c.no)); bd.style.background = c.color; n.appendChild(bd); n.appendChild(document.createTextNode(c.name)); slot.appendChild(n);
+  slot.appendChild(el('div',{}, c.desc));
+  var r = el('div',{class:'row'}); var a = el('button',{class:'btn primary',type:'button'},'▶ アニメで 見る');
+  a.addEventListener('click', function(){ cur.anim.card = c.id; show('anim'); }); r.appendChild(a); slot.appendChild(r);
+}
+function renderCardList(b){
+  var box = $('cardList'); box.textContent = '';
+  CARDS.forEach(function(c){
+    var p = el('button',{class:'card-pick',type:'button','aria-pressed': String(b.card===c.id)});
+    if(b.card===c.id) p.style.borderColor = c.color;
+    var bd = el('span',{class:'badge'}, String(c.no)); bd.style.background = c.color; p.appendChild(bd); p.appendChild(document.createTextNode(c.name));
+    p.addEventListener('click', function(){ b.card = c.id; b.blank = false; if(b.origId){ b.origId = null; b.origName = ''; } save(); renderBoard(); toast('「'+c.name+'」を はりました'); });
+    box.appendChild(p);
+  });
+}
+function renderAssign(b,t){
+  var box = $('assign'); box.textContent = '';
+  ['1','2','3','4','k'].forEach(function(k){
+    var lab = el('label',{});
+    var tag = el('span',{class:'lane-tag'}, k==='k' ? 'かんとく' : k+'ばん'); tag.style.background = k==='k' ? '#3d4440' : LANE[+k-1]; lab.appendChild(tag);
+    var sel = el('select',{id:'as'+k,'aria-label': (k==='k'?'かんとく':k+'ばん')+'の 人'});
+    sel.appendChild(el('option',{value:''},'—'));
+    t.members.forEach(function(m){ var o = el('option',{value:m.id}, displayName(m)); if(b.assign[k]===m.id) o.selected = true; sel.appendChild(o); });
+    sel.addEventListener('change', function(){
+      var v = sel.value; for(var kk in b.assign){ if(kk!==k && b.assign[kk]===v && v) b.assign[kk] = ''; }
+      b.assign[k] = v; save(); renderBoard();
+    });
+    lab.appendChild(sel); box.appendChild(lab);
+  });
+}
+$('toStart').addEventListener('click', function(){ var b = boardState(); startPositions(b, team(cur.teamId)); save(); renderBoard(); });
+$('toPlay').addEventListener('click', function(){ var b = boardState(); if(!b.card){ toast('さきに さくせんカードを えらんでね'); return; } playPositions(b, team(cur.teamId)); save(); renderBoard(); });
+
+/* dragging */
+function toCourt(wrap, e){ var r = wrap.getBoundingClientRect(); return [Math.max(8,Math.min(W-8,(e.clientX-r.left)/r.width*W)), Math.max(8,Math.min(H-8,(e.clientY-r.top)/r.height*H))]; }
+function makeDraggable(node, wrap){
+  node.addEventListener('pointerdown', function(e){
+    if(cur.mode!=='move') return;
+    e.preventDefault(); e.stopPropagation();
+    var b = boardState(); var key = node.dataset.key;
+    try{ node.setPointerCapture(e.pointerId); }catch(_){}
+    node.classList.add('dragging');
+    if(key==='ball'){ b.holder = null; }
+    function mv(ev){ var p = toCourt(wrap, ev); if(key==='ball'){ b.pos.ball = p; } else { b.pos[key] = p; node.style.zIndex = String(10 + Math.round(p[1])); } pct(p[0],p[1],node); if(key!=='ball' && b.holder===key){ var bn = wrap.querySelector('.ball'); var bp = ballPos(b); pct(bp[0],bp[1],bn); } }
+    function up(){
+      node.classList.remove('dragging');
+      node.removeEventListener('pointermove', mv); node.removeEventListener('pointerup', up); node.removeEventListener('pointercancel', up);
+      if(key==='ball'){ // snap to nearest player within reach
+        var best = null, bd = 40; team(cur.teamId).members.forEach(function(m){ var p = b.pos[m.id]; var d = Math.hypot(p[0]-b.pos.ball[0], p[1]-b.pos.ball[1]); if(d<bd){ bd = d; best = m.id; } });
+        b.holder = best; var bp = ballPos(b); pct(bp[0],bp[1],node);
+      }
+      save();
+    }
+    node.addEventListener('pointermove', mv); node.addEventListener('pointerup', up); node.addEventListener('pointercancel', up);
+  });
+  node.addEventListener('keydown', function(e){
+    if(cur.mode!=='move') return;
+    var d = {ArrowLeft:[-10,0],ArrowRight:[10,0],ArrowUp:[0,-10],ArrowDown:[0,10]}[e.key]; if(!d) return;
+    e.preventDefault(); var b = boardState(); var key = node.dataset.key;
+    if(key==='ball'){ b.holder = null; b.pos.ball = [b.pos.ball[0]+d[0], b.pos.ball[1]+d[1]]; pct(b.pos.ball[0],b.pos.ball[1],node); }
+    else { b.pos[key] = [b.pos[key][0]+d[0], b.pos[key][1]+d[1]]; pct(b.pos[key][0],b.pos[key][1],node); if(b.holder===key){ var bp = ballPos(b); pct(bp[0],bp[1],wrap.querySelector('.ball')); } }
+    save();
+  });
+}
+
+/* pen */
+function setMode(m){
+  cur.mode = m; ['mMove','mRun','mPass','mFake'].forEach(function(id){ var bt = $(id); bt.classList.toggle('on', bt.dataset.mode===m); bt.setAttribute('aria-pressed', String(bt.dataset.mode===m)); });
+  var w = $('boardCourt'); if(w) w.classList.toggle('pen', m!=='move');
+}
+['mMove','mRun','mPass','mFake'].forEach(function(id){ $(id).addEventListener('click', function(){ setMode($(id).dataset.mode); }); });
+function pathD(pts){ return pts.map(function(p,i){ return (i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1); }).join(''); }
+/* gentle curve through a few points (quadratic, bends at the middle points) */
+function smoothD(pts){
+  if(pts.length<3) return pathD(pts);
+  var d = 'M'+pts[0][0].toFixed(1)+' '+pts[0][1].toFixed(1);
+  for(var i=1;i<pts.length-1;i++){ var mx = (pts[i][0]+pts[i+1][0])/2, my = (pts[i][1]+pts[i+1][1])/2;
+    d += 'Q'+pts[i][0].toFixed(1)+' '+pts[i][1].toFixed(1)+' '+(i===pts.length-2 ? pts[i+1][0].toFixed(1)+' '+pts[i+1][1].toFixed(1) : mx.toFixed(1)+' '+my.toFixed(1)); }
+  return d;
+}
+function lineEl(ln, base){
+  var p = document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d', smoothD(ln.pts)); p.setAttribute('fill','none'); p.setAttribute('stroke-width', base ? '4.5' : '5'); p.setAttribute('stroke-linecap','round'); p.setAttribute('stroke-linejoin','round');
+  if(ln.type==='pass'){ p.setAttribute('stroke','var(--pass)'); p.setAttribute('stroke-dasharray','10 8'); p.setAttribute('marker-end','url(#arPass)'); }
+  else if(ln.type==='fake'){ p.setAttribute('stroke','#8a8a8a'); p.setAttribute('stroke-dasharray','3 7'); p.setAttribute('marker-end','url(#arFake)'); }
+  else { p.setAttribute('stroke','var(--fg)'); p.setAttribute('marker-end','url(#arRun)'); }
+  if(base) p.setAttribute('opacity','.75');
+  return p;
+}
+function drawLines(wrap, lines){ var g = wrap.querySelector('svg.ink .lines'); g.textContent = ''; lines.forEach(function(l){ if(l.pts.length>1) g.appendChild(lineEl(l)); }); }
+function drawBase(wrap, b){
+  var g = wrap.querySelector('svg.ink .base'); g.textContent = '';
+  var c = b.card ? cardById(b.card) : null; if(!c || b.showBase===false) return;
+  c.plan.forEach(function(l){ g.appendChild(lineEl(l, true)); });
+}
+function setupPen(wrap){
+  wrap.addEventListener('pointerdown', function(e){
+    if(cur.mode==='move') return;
+    e.preventDefault(); var b = boardState();
+    try{ wrap.setPointerCapture(e.pointerId); }catch(_){}
+    var ln = {type:cur.mode, pts:[toCourt(wrap,e)]}; var g = wrap.querySelector('svg.ink .lines'); var pe = lineEl(ln); g.appendChild(pe);
+    function mv(ev){ var p = toCourt(wrap,ev); var last = ln.pts[ln.pts.length-1]; if(Math.hypot(p[0]-last[0],p[1]-last[1])>4){ ln.pts.push(p); pe.setAttribute('d', pathD(ln.pts)); } }
+    function up(){ wrap.removeEventListener('pointermove',mv); wrap.removeEventListener('pointerup',up); wrap.removeEventListener('pointercancel',up);
+      var a = ln.pts[0], z = ln.pts[ln.pts.length-1];
+      if(ln.pts.length>1 && Math.hypot(z[0]-a[0], z[1]-a[1]) > 14){ ln.pts = simplify(ln.pts); b.lines.push(ln); save(); } drawLines(wrap, b.lines); }
+    wrap.addEventListener('pointermove',mv); wrap.addEventListener('pointerup',up); wrap.addEventListener('pointercancel',up);
+  });
+}
+/* turn a wobbly finger line into a simple arrow: keep only the main turning points (at most 4) */
+function simplify(pts){
+  function rdp(a, eps){
+    if(a.length<3) return a;
+    var s = a[0], e = a[a.length-1], dx = e[0]-s[0], dy = e[1]-s[1], L = Math.hypot(dx,dy)||1, idx = 0, mx = 0;
+    for(var i=1;i<a.length-1;i++){ var d = Math.abs(dy*a[i][0]-dx*a[i][1]+e[0]*s[1]-e[1]*s[0])/L; if(d>mx){ mx = d; idx = i; } }
+    if(mx<=eps) return [s,e];
+    var l = rdp(a.slice(0,idx+1), eps), r = rdp(a.slice(idx), eps); return l.slice(0,-1).concat(r);
+  }
+  var eps = 14, out = rdp(pts, eps);
+  while(out.length>4){ eps *= 1.5; out = rdp(pts, eps); }
+  return out;
+}
+$('undoLine').addEventListener('click', function(){ var b = boardState(); b.lines.pop(); save(); drawLines($('boardCourt'), b.lines); });
+var clearArmed = false;
+$('clearLines').addEventListener('click', function(){
+  var bt = $('clearLines');
+  if(!clearArmed){ clearArmed = true; bt.textContent = 'もう一度 おすと けします'; setTimeout(function(){ clearArmed = false; bt.textContent = 'ぜんぶ けす'; }, 3000); return; }
+  clearArmed = false; bt.textContent = 'ぜんぶ けす'; var b = boardState(); b.lines = []; save(); drawLines($('boardCourt'), b.lines);
+});
+
+/* original plays */
+function origs(){ if(!S.originals) S.originals = {}; return S.originals[cur.teamId] || (S.originals[cur.teamId] = []); }
+function renderOrig(b){
+  var bt = $('baseToggle'); var hasBase = !!b.card;
+  bt.disabled = !hasBase; bt.textContent = b.showBase===false ? 'お手本の 線を 見せる' : 'お手本の 線を かくす'; bt.setAttribute('aria-pressed', String(b.showBase!==false));
+  var nm = $('origName'); if(document.activeElement !== nm) nm.value = b.origName || '';
+  var box = $('origList'); box.textContent = ''; var list = origs();
+  if(!list.length){ box.appendChild(el('p',{class:'msg'},'まだ オリジナル さくせんは ありません')); return; }
+  list.forEach(function(o, idx){
+    var base = o.base ? cardById(o.base) : null;
+    var it = el('div',{class:'saved-item'});
+    var lab = el('span',{class:'grow'}); var st = el('b',{}, '★ ' + o.name); lab.appendChild(st);
+    lab.appendChild(document.createTextNode('　' + (base ? 'もと：' + base.name : 'まっさらから'))); it.appendChild(lab);
+    if(b.origId===o.id) it.style.borderColor = 'var(--accent)';
+    var ld = el('button',{class:'btn',type:'button'},'よびだす');
+    ld.addEventListener('click', function(){ b.card = o.base; b.blank = !o.base; b.origId = o.id; b.origName = o.name; b.assign = clone(o.assign); b.pos = clone(o.pos); b.lines = clone(o.lines); b.holder = o.holder; b.showBase = true; save(); renderBoard(); toast('「'+o.name+'」を よびだしました'); });
+    var del = el('button',{class:'btn ghost',type:'button','aria-label':'けす'},'けす'); var armed = false;
+    del.addEventListener('click', function(){ if(!armed){ armed = true; del.textContent = 'ほんとうに けす'; setTimeout(function(){ armed = false; del.textContent = 'けす'; }, 3000); return; }
+      list.splice(idx,1); if(b.origId===o.id){ b.origId = null; } save(); renderBoard(); });
+    it.appendChild(ld); it.appendChild(del); box.appendChild(it);
+  });
+}
+$('blankBtn').addEventListener('click', function(){
+  var b = boardState(); b.card = null; b.blank = true; b.origId = null; b.origName = ''; b.lines = []; startPositions(b, team(cur.teamId)); save(); renderBoard();
+  setMode('run'); toast('まっさらな ボードです。線を かいてみよう');
+});
+$('baseToggle').addEventListener('click', function(){ var b = boardState(); b.showBase = (b.showBase===false); save(); drawBase($('boardCourt'), b); renderOrig(b); });
+$('origName').addEventListener('input', function(){ var b = boardState(); b.origName = $('origName').value; save(); });
+$('saveOrig').addEventListener('click', function(){
+  var b = boardState(); var name = ($('origName').value || '').trim();
+  if(!name){ toast('さくせんの 名前を 入れてね'); $('origName').focus(); return; }
+  if(!b.card && !b.lines.length){ toast('線を かいてから ほぞんしてね'); return; }
+  var list = origs(); var rec = {name:name, base:b.card || null, assign:clone(b.assign), pos:clone(b.pos), lines:clone(b.lines), holder:b.holder};
+  var ex = null; list.forEach(function(o){ if(o.id===b.origId && o.name===name) ex = o; });
+  if(ex){ for(var k in rec) ex[k] = rec[k]; toast('「'+name+'」を うわがき しました'); }
+  else { rec.id = 'o'+Date.now(); list.unshift(rec); b.origId = rec.id; toast('「'+name+'」を ほぞんしました'); }
+  b.origName = name; b.blank = !b.card; save(); renderBoard();
+});
+
+/* save / load plans */
+function renderPeriod(b){ var s = $('period'); s.textContent=''; for(var i=1;i<=8;i++){ var o = el('option',{value:String(i)}, i+'時間目'); if(b.period===i) o.selected = true; s.appendChild(o); } }
+$('period').addEventListener('change', function(){ var b = boardState(); b.period = +$('period').value; save(); });
+$('saveBoard').addEventListener('click', function(){
+  var b = boardState(); var list = S.saved[cur.teamId] || (S.saved[cur.teamId] = []);
+  var d = new Date(); var stamp = (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  list.unshift({id:'s'+Date.now(), at:stamp, period:b.period, card:b.card, assign:clone(b.assign), pos:clone(b.pos), lines:clone(b.lines), holder:b.holder});
+  if(list.length>30) list.length = 30;
+  save(); renderSaved(); toast('ほぞんしました');
+});
+function renderSaved(){
+  var box = $('savedList'); box.textContent = ''; var list = S.saved[cur.teamId] || [];
+  if(!list.length){ box.appendChild(el('p',{class:'msg'},'まだ ほぞんした さくせんは ありません')); return; }
+  list.forEach(function(s, idx){
+    var c = s.card ? cardById(s.card) : null;
+    var it = el('div',{class:'saved-item'});
+    it.appendChild(el('span',{class:'grow'}, s.period+'時間目　'+(c?c.name:'カードなし')+'　（'+s.at+'）'));
+    var ld = el('button',{class:'btn',type:'button'},'よびだす');
+    ld.addEventListener('click', function(){ var b = boardState(); b.card = s.card; b.assign = clone(s.assign); b.pos = clone(s.pos); b.lines = clone(s.lines); b.holder = s.holder; b.period = s.period; save(); renderBoard(); toast('よびだしました'); });
+    var del = el('button',{class:'btn ghost',type:'button','aria-label':'けす'},'けす'); var armed = false;
+    del.addEventListener('click', function(){ if(!armed){ armed = true; del.textContent = 'ほんとうに けす'; setTimeout(function(){ armed = false; del.textContent = 'けす'; }, 3000); return; } list.splice(idx,1); save(); renderSaved(); });
+    it.appendChild(ld); it.appendChild(del); box.appendChild(it);
+  });
+}
+
+/* ---------- animation ---------- */
+var raf = 0, lastTs = 0;
+/* smooth path through waypoints (Catmull-Rom), so runners curve without stopping at each point */
+function interp(wp, t){
+  if(t<=wp[0][0]) return [wp[0][1], wp[0][2]];
+  for(var i=1;i<wp.length;i++){ if(t<=wp[i][0]){
+    var p1 = wp[i-1], p2 = wp[i], p0 = wp[i-2] || p1, p3 = wp[i+1] || p2;
+    var u = (t-p1[0])/((p2[0]-p1[0])||1); u = u<0?0:(u>1?1:u);
+    if(p1[1]===p2[1] && p1[2]===p2[2]) return [p1[1], p1[2]];
+    if(p0[1]===p1[1] && p0[2]===p1[2]) p0 = p1; // starting from a standstill: no overshoot
+    var u2 = u*u, u3 = u2*u;
+    function cr(a,b,c,d){ return 0.5*((2*b)+(-a+c)*u+(2*a-5*b+4*c-d)*u2+(-a+3*b-3*c+d)*u3); }
+    return [cr(p0[1],p1[1],p2[1],p3[1]), cr(p0[2],p1[2],p2[2],p3[2])];
+  } }
+  var l = wp[wp.length-1]; return [l[1], l[2]];
+}
+/* arm actions: passes (throw toward receiver) and fakes (reach toward the decoy) */
+function actions(c){
+  if(c._acts) return c._acts;
+  var acts = [], holder = c.carrier;
+  c.passes.forEach(function(p){
+    var a = interp(c.path[holder], p.t0), b = interp(c.path[p.to], p.t1);
+    acts.push({actor:String(holder), t0:p.t0-0.35, t1:p.t0+0.25, dir:(b[0]-a[0])>=0?1:-1, amp:88});
+    acts.push({actor:String(p.to), t0:p.t1-0.25, t1:p.t1+0.2, dir:(a[0]-b[0])>=0?1:-1, amp:55});
+    holder = p.to;
+  });
+  (c.fakes||[]).forEach(function(f){
+    var a = interp(c.path[f.from], f.t0), b = interp(c.path[f.to], (f.t0+f.t1)/2);
+    acts.push({actor:String(f.from), t0:f.t0, t1:f.t1, dir:(b[0]-a[0])>=0?1:-1, amp:80});
+  });
+  c._acts = acts; return acts;
+}
+/* running arm: k=1 pumped forward (bent, hand up at chest), k=0 swung back (hand low) */
+function runArm(sx, side, k){
+  var ex = sx + side*(-3 + 1*k), ey = 33 - 2*k;          // elbow
+  var hx = sx + side*(-1.5 + 4.5*k), hy = 41 - 12*k;     // hand
+  return {d:'M'+sx+' 26L'+ex.toFixed(1)+' '+ey.toFixed(1)+'L'+hx.toFixed(1)+' '+hy.toFixed(1), hx:hx, hy:hy};
+}
+function pose(c, key, t, node){
+  var q = function(s){ return node.querySelector(s); };
+  var p0 = interp(c.path[key], Math.max(0,t-0.05)), p1 = interp(c.path[key], t+0.05);
+  var running = Math.hypot(p1[0]-p0[0], p1[1]-p0[1]) / 0.1 > 12;
+  var act = null;
+  actions(c).forEach(function(a){ if(a.actor===key && t>=a.t0 && t<=a.t1) act = a; });
+  var s = running ? Math.sin(t*14) : 0;
+  q('.bod').setAttribute('transform', 'translate(0 '+(-2.5*Math.abs(s)).toFixed(2)+')');
+  q('.legL').setAttribute('transform', 'translate(0 '+(-5*Math.max(0,s)).toFixed(2)+')');
+  q('.legR').setAttribute('transform', 'translate(0 '+(-5*Math.max(0,-s)).toFixed(2)+')');
+  var arms = [['.armL',13,-1,(s+1)/2],['.armR',33,1,(1-s)/2]];
+  arms.forEach(function(a){
+    var g = q(a[0]), path = g.querySelector('.a'), hand = g.querySelector('.h');
+    if(act){
+      var e = Math.sin(Math.PI*(t-act.t0)/(act.t1-act.t0)); var ang = (act.dir>0 ? -act.amp : act.amp)*e;
+      path.setAttribute('d','M'+a[1]+' 26L'+a[1]+' 39'); hand.setAttribute('cx', a[1]); hand.setAttribute('cy', 41);
+      g.setAttribute('transform','rotate('+ang.toFixed(1)+' '+a[1]+' 26)');
+    } else if(running){
+      var r = runArm(a[1], a[2], a[3]); path.setAttribute('d', r.d); hand.setAttribute('cx', r.hx.toFixed(1)); hand.setAttribute('cy', r.hy.toFixed(1));
+      g.removeAttribute('transform');
+    } else {
+      path.setAttribute('d','M'+a[1]+' 26L'+a[1]+' 39'); hand.setAttribute('cx', a[1]); hand.setAttribute('cy', 41); g.removeAttribute('transform');
+    }
+  });
+}
+function drawPlan(c, wrap){
+  var g = wrap.querySelector('svg.ink .lines'); g.textContent = '';
+  c.plan.forEach(function(l){ g.appendChild(lineEl(l)); });
+  c.plan.forEach(function(l){ if(l.type!=='fake') return; var p = l.pts[l.pts.length-1];
+    var tx = document.createElementNS('http://www.w3.org/2000/svg','text'); tx.setAttribute('x', p[0].toFixed(1)); tx.setAttribute('y', (p[1]+22).toFixed(1)); tx.setAttribute('text-anchor','middle');
+    tx.setAttribute('font-size','16'); tx.setAttribute('font-weight','700'); tx.setAttribute('fill','#6b6b6b'); tx.textContent = 'ふり'; g.appendChild(tx); });
+}
+function duration(c){ var m = 0; for(var k in c.path){ var w = c.path[k]; m = Math.max(m, w[w.length-1][0]); } c.passes.forEach(function(p){ m = Math.max(m, p.t1); }); c.caps.forEach(function(cp){ m = Math.max(m, cp[0]); }); return m + 1; }
+function ballAt(c, t){
+  var holder = c.carrier, from = null;
+  for(var i=0;i<c.passes.length;i++){ var p = c.passes[i];
+    if(t>=p.t1){ holder = p.to; continue; }
+    if(t>=p.t0){ var a = interp(c.path[holder], p.t0), b = interp(c.path[p.to], p.t1), f = (t-p.t0)/(p.t1-p.t0);
+      return [a[0]+(b[0]-a[0])*f + 22, a[1]+(b[1]-a[1])*f - 4 - Math.sin(f*Math.PI)*18]; }
+    break;
+  }
+  var h = interp(c.path[holder], t);
+  var fk = (c.fakes||[]).filter(function(f){ return t>=f.t0 && t<=f.t1 && f.from===holder; })[0];
+  if(fk){ var tg = interp(c.path[fk.to], t), f2 = (t-fk.t0)/(fk.t1-fk.t0), k = Math.sin(Math.PI*f2)*0.42;
+    return [h[0]+22+(tg[0]-h[0])*k, h[1]-4+(tg[1]-h[1])*k]; }
+  return [h[0]+22, h[1]-4];
+}
+function renderAnim(){
+  var c = cardById(cur.anim.card) || CARDS[0];
+  var box = $('animCard'); box.textContent=''; box.style.borderColor = c.color;
+  var n = el('div',{class:'cname'}); var bd = el('span',{class:'badge'}, String(c.no)); bd.style.background = c.color; n.appendChild(bd); n.appendChild(document.createTextNode(c.name)); box.appendChild(n);
+  box.appendChild(el('div',{}, c.desc));
+  var list = $('animCardList'); list.textContent='';
+  CARDS.forEach(function(x){ var p = el('button',{class:'card-pick',type:'button','aria-pressed':String(x.id===c.id)}); if(x.id===c.id) p.style.borderColor = x.color;
+    var b2 = el('span',{class:'badge'}, String(x.no)); b2.style.background = x.color; p.appendChild(b2); p.appendChild(document.createTextNode(x.name));
+    p.addEventListener('click', function(){ cur.anim.card = x.id; cur.anim.t = 0; stopAnim(); renderAnim(); }); list.appendChild(p); });
+  $('useThis').hidden = !cur.teamId;
+  $('showName').disabled = !cur.teamId;
+  var wrap = $('animCourt'); wrap.innerHTML = courtSVG(); drawPlan(c, wrap);
+  var t = cur.teamId ? team(cur.teamId) : null; var b = t ? boardState() : null;
+  for(var i=1;i<=4;i++){
+    var pp = el('div',{class:'person'}); pp.dataset.key = String(i); pp.innerHTML = personSVG(LANE[i-1], String(i));
+    if(cur.anim.names && b && b.assign[String(i)]){ var m = member(b.assign[String(i)]); if(m) pp.appendChild(el('span',{class:'pname'}, displayName(m))); }
+    wrap.appendChild(pp);
+  }
+  ['d1','d2'].forEach(function(k){ var d = el('div',{class:'person'}); d.dataset.key = k; d.innerHTML = personSVG('#3d4440','ま'); wrap.appendChild(d); });
+  var ball = el('div',{class:'ball'}); ball.dataset.key = 'ball'; ball.innerHTML = BALL_SVG; wrap.appendChild(ball);
+  (c.bubbles||[]).forEach(function(bb, j){ var bu = el('div',{class:'bubble'}, bb[3]); bu.dataset.j = String(j); bu.hidden = true; wrap.appendChild(bu); });
+  $('showNum').classList.toggle('on', !cur.anim.names); $('showName').classList.toggle('on', cur.anim.names);
+  $('slowBtn').classList.toggle('on', cur.anim.slow); $('slowBtn').setAttribute('aria-pressed', String(cur.anim.slow));
+  frame(c, cur.anim.t);
+}
+function frame(c, t){
+  var wrap = $('animCourt');
+  wrap.querySelectorAll('.person').forEach(function(tk){ var p = interp(c.path[tk.dataset.key], t); pct(p[0],p[1],tk); tk.style.zIndex = String(10 + Math.round(p[1])); pose(c, tk.dataset.key, t, tk); });
+  var bp = ballAt(c, t); pct(bp[0], bp[1], wrap.querySelector('.ball'));
+  wrap.querySelectorAll('.bubble').forEach(function(bu){ var bb = c.bubbles[+bu.dataset.j]; var on = t>=bb[0] && t<bb[1]; bu.hidden = !on;
+    if(on){ var p = interp(c.path[bb[2]], t); pct(Math.max(70,Math.min(330,p[0])), p[1]-52, bu); } });
+  var ink = wrap.querySelector('svg.ink'); if(ink) ink.style.opacity = (t<=0 || t>=duration(c)) ? '1' : '.35';
+  var cap = '▶ を おして スタート'; if(t>0){ for(var i=0;i<c.caps.length;i++){ if(t>=c.caps[i][0]) cap = c.caps[i][1]; } }
+  $('caption').textContent = cap;
+  $('tl').style.width = Math.min(100, t/duration(c)*100)+'%';
+}
+function tick(ts){
+  var c = cardById(cur.anim.card); if(!c) return;
+  if(!lastTs) lastTs = ts; var dt = (ts-lastTs)/1000; lastTs = ts;
+  cur.anim.t += dt * (cur.anim.slow ? 0.5 : 1);
+  var D = duration(c);
+  if(cur.anim.t >= D){ cur.anim.t = D; frame(c, D); stopAnim(); return; }
+  frame(c, cur.anim.t); raf = requestAnimationFrame(tick);
+}
+function playAnim(){ var c = cardById(cur.anim.card); if(cur.anim.t >= duration(c)) cur.anim.t = 0; cur.anim.playing = true; lastTs = 0; $('playBtn').textContent = '❚❚ 一時ていし'; raf = requestAnimationFrame(tick); }
+function stopAnim(){ cancelAnimationFrame(raf); raf = 0; cur.anim.playing = false; var pb = $('playBtn'); if(pb) pb.textContent = '▶ さいせい'; }
+$('playBtn').addEventListener('click', function(){ if(cur.anim.playing) stopAnim(); else playAnim(); });
+$('replayBtn').addEventListener('click', function(){ stopAnim(); cur.anim.t = 0; playAnim(); });
+$('slowBtn').addEventListener('click', function(){ cur.anim.slow = !cur.anim.slow; $('slowBtn').classList.toggle('on', cur.anim.slow); $('slowBtn').setAttribute('aria-pressed', String(cur.anim.slow)); });
+$('showNum').addEventListener('click', function(){ cur.anim.names = false; var p = cur.anim.playing; stopAnim(); renderAnim(); if(p) playAnim(); });
+$('showName').addEventListener('click', function(){ cur.anim.names = true; var p = cur.anim.playing; stopAnim(); renderAnim(); if(p) playAnim(); });
+$('useThis').addEventListener('click', function(){ if(!cur.teamId) return; var b = boardState(); b.card = cur.anim.card; save(); show('board'); toast('ボードに はりました'); });
+
+/* ---------- teacher ---------- */
+$('pinForm').addEventListener('submit', function(e){ e.preventDefault(); if($('pinIn').value === (S.settings.pin||'0000')){ draftFromRoster(); show('teacher'); } else { $('pinMsg').hidden = false; } });
+function draftFromRoster(){
+  cur.draft = {teams: S.roster.teams.map(function(t){ return {id:t.id, name:t.name, color:t.color}; }), members: []};
+  S.roster.teams.forEach(function(t){ t.members.forEach(function(m){ cur.draft.members.push({id:m.id, no:m.no, sei:m.sei, mei:m.mei, team:t.id}); }); });
+}
+function renderTeacher(){
+  if(!cur.draft) draftFromRoster();
+  $('nmFull').checked = S.settings.nameMode!=='sei'; $('nmSei').checked = S.settings.nameMode==='sei';
+  renderDraft();
+}
+function renderDraft(){
+  var d = cur.draft; var te = $('teamEdit'); te.textContent = '';
+  d.teams.forEach(function(t, i){
+    var g = el('div',{class:'group',style:'flex:1 1 260px;min-width:0'});
+    var r = el('div',{class:'row'});
+    var dot = el('span',{class:'dot'}); dot.style.background = t.color; r.appendChild(dot);
+    var nm = el('input',{type:'text',id:'tn'+i,'aria-label':'チーム名',style:'flex:1;min-width:0;min-height:44px;border:1.5px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--surface)'}); nm.value = t.name;
+    nm.addEventListener('input', function(){ t.name = nm.value; refreshTeamSelects(); }); r.appendChild(nm);
+    var cs = el('select',{id:'tc'+i,'aria-label':'チームの色',style:'width:auto'});
+    TEAM_COLORS.forEach(function(c){ var o = el('option',{value:c[1]}, c[0]); if(c[1]===t.color) o.selected = true; cs.appendChild(o); });
+    cs.addEventListener('change', function(){ t.color = cs.value; dot.style.background = cs.value; }); r.appendChild(cs);
+    g.appendChild(r);
+    var cnt = d.members.filter(function(m){ return m.team===t.id; }).length;
+    g.appendChild(el('span',{class:'msg'}, cnt+'人'));
+    te.appendChild(g);
+  });
+  var tb = $('memberRows'); tb.textContent = '';
+  d.members.forEach(function(m, i){
+    var tr = el('tr');
+    [['no','number'],['sei','text'],['mei','text']].forEach(function(f){ var td = el('td'); var inp = el('input',{type:f[1],id:'mr'+i+f[0],'aria-label':f[0]==='no'?'番号':(f[0]==='sei'?'名字':'名前')}); inp.value = m[f[0]]==null?'':m[f[0]]; inp.addEventListener('input', function(){ m[f[0]] = f[0]==='no' ? (+inp.value||'') : inp.value; }); td.appendChild(inp); tr.appendChild(td); });
+    var td = el('td'); var sel = el('select',{class:'team-sel',id:'mt'+i,'aria-label':'チーム'}); fillTeamSelect(sel, m.team); sel.addEventListener('change', function(){ m.team = sel.value; renderDraft(); }); td.appendChild(sel); tr.appendChild(td);
+    var td2 = el('td'); var x = el('button',{class:'btn ghost',type:'button','aria-label':'この行を消す'},'消す'); x.addEventListener('click', function(){ d.members.splice(i,1); renderDraft(); }); td2.appendChild(x); tr.appendChild(td2);
+    tb.appendChild(tr);
+  });
+}
+function fillTeamSelect(sel, val){ sel.textContent=''; cur.draft.teams.forEach(function(t){ var o = el('option',{value:t.id}, t.name||'（名前なし）'); if(t.id===val) o.selected = true; sel.appendChild(o); }); }
+function refreshTeamSelects(){ document.querySelectorAll('.team-sel').forEach(function(s){ fillTeamSelect(s, s.value); }); }
+$('addMember').addEventListener('click', function(){ var d = cur.draft; if(!d.teams.length) d.teams.push({id:'t'+Date.now(), name:'チーム1', color:TEAM_COLORS[0][1]}); var maxNo = d.members.reduce(function(a,m){ return Math.max(a, +m.no||0); },0); d.members.push({id:'m'+Date.now(), no:maxNo+1, sei:'', mei:'', team:d.teams[0].id}); renderDraft(); });
+
+function splitRow(line){
+  if(line.indexOf('\t')>=0) return line.split('\t').map(function(s){ return s.trim(); });
+  var out = [], curS = '', q = false;
+  for(var i=0;i<line.length;i++){ var ch = line[i];
+    if(q){ if(ch==='"'){ if(line[i+1]==='"'){ curS+='"'; i++; } else q = false; } else curS += ch; }
+    else if(ch==='"') q = true; else if(ch===','){ out.push(curS.trim()); curS=''; } else curS += ch; }
+  out.push(curS.trim()); return out;
+}
+function parseRoster(text){
+  var lines = text.replace(/\r/g,'').split('\n').filter(function(l){ return l.trim(); });
+  if(!lines.length) return null;
+  var rows = lines.map(splitRow);
+  var h = rows[0].join(' ');
+  if(/番号|名字|姓|名前|チーム|氏名/.test(h)) rows.shift();
+  var teams = [], byName = {}, members = [];
+  rows.forEach(function(r, i){
+    if(r.length < 2) return;
+    var no = r[0], sei = r[1]||'', mei = r[2]||'', tn = r[3]||'チーム1';
+    if(r.length===3 && /^\d+$/.test(r[0])===false){ sei = r[0]; mei = r[1]; tn = r[2]; no = i+1; }
+    if(!sei && !mei) return;
+    if(!byName[tn]){ var c = TEAM_COLORS[teams.length % TEAM_COLORS.length][1]; byName[tn] = {id:'t'+Date.now()+teams.length, name:tn, color:c}; teams.push(byName[tn]); }
+    members.push({id:'m'+Date.now()+'_'+i, no:(+no||i+1), sei:sei, mei:mei, team:byName[tn].id});
+  });
+  return members.length ? {teams:teams, members:members} : null;
+}
+$('rosterIn').addEventListener('paste', function(){ setTimeout(function(){ $('parseMsg').textContent = '貼り付けました。「読み取る」をおしてください。'; }, 0); });
+$('parseRoster').addEventListener('click', function(){
+  var r = parseRoster($('rosterIn').value);
+  if(!r){ $('parseMsg').textContent = '読み取れませんでした。「番号・名字・名前・チーム」の4列になっているか確かめてください。'; return; }
+  cur.draft = r; renderDraft(); $('parseMsg').textContent = r.teams.length+'チーム・'+r.members.length+'人を読み取りました。下の表で確かめて「この名簿で保存する」をおしてください。';
+});
+$('csvIn').addEventListener('change', function(){
+  var f = $('csvIn').files[0]; if(!f) return; var rd = new FileReader();
+  rd.onload = function(){ $('rosterIn').value = String(rd.result); $('parseRoster').click(); $('csvIn').value = ''; };
+  rd.onerror = function(){ $('parseMsg').textContent = 'ファイルを開けませんでした。'; };
+  rd.readAsText(f);
+});
+$('saveRoster').addEventListener('click', function(){
+  var d = cur.draft; var teams = d.teams.map(function(t){ return {id:t.id, name:t.name.trim()||'チーム', color:t.color, members:[]}; });
+  var idx = {}; teams.forEach(function(t){ idx[t.id] = t; });
+  d.members.forEach(function(m){ if(!(m.sei||m.mei)) return; var t = idx[m.team]; if(t) t.members.push({id:m.id, no:m.no, sei:(m.sei||'').trim(), mei:(m.mei||'').trim()}); });
+  teams = teams.filter(function(t){ return t.members.length; });
+  teams.forEach(function(t){ t.members.sort(function(a,b){ return (+a.no||0)-(+b.no||0); }); });
+  if(!teams.length){ $('rosterMsg').textContent = 'メンバーがいないので保存できません。'; return; }
+  S.roster = {teams:teams}; S.settings.sample = false;
+  Object.keys(S.boards).forEach(function(k){ if(!idx[k]) delete S.boards[k]; });
+  save(); draftFromRoster(); renderDraft(); $('sampleFlag').hidden = true;
+  $('rosterMsg').textContent = teams.length+'チーム・'+teams.reduce(function(a,t){ return a+t.members.length; },0)+'人で保存しました。'; toast('名簿を保存しました');
+});
+document.querySelectorAll('input[name="nameMode"]').forEach(function(r){ r.addEventListener('change', function(){ S.settings.nameMode = r.value; save(); toast(r.value==='sei' ? '名字だけで表示します' : '本名で表示します'); }); });
+
+/* export / import */
+function getDownloads(){ try{ return (window.claude && window.claude.use) ? window.claude.use('downloads') : Promise.resolve(null); }catch(e){ return Promise.resolve(null); } }
+$('exportBtn').addEventListener('click', function(){
+  var downloadsP = getDownloads();
+  var data = JSON.stringify({app:'tryapp', v:1, exportedAt:new Date().toISOString(), roster:S.roster, settings:{nameMode:S.settings.nameMode}, saved:S.saved, boards:S.boards, originals:S.originals||{}}, null, 1);
+  var d = new Date(); var fn = 'tryapp_' + d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2) + '.json';
+  $('exportFallback').hidden = true;
+  downloadsP.then(function(dl){
+    if(!dl) throw {code:'unavailable'};
+    return dl.save({filename:fn, data:data}).then(function(){ $('dataMsg').textContent = '「'+fn+'」を書き出しました。'; });
+  }).catch(function(err){
+    if(err && err.code==='declined'){ $('dataMsg').textContent = '書き出しを取りやめました。'; return; }
+    $('exportText').value = data; $('exportFallback').hidden = false;
+  });
+});
+$('copyExport').addEventListener('click', function(){
+  var ta = $('exportText');
+  function sel(){ ta.focus(); ta.select(); $('dataMsg').textContent = '文字を選びました。コピーしてください。'; }
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value).then(function(){ toast('コピーしました'); }, sel); } else sel();
+});
+$('importIn').addEventListener('change', function(){
+  var f = $('importIn').files[0]; if(!f) return; var rd = new FileReader();
+  rd.onload = function(){
+    try{
+      var o = JSON.parse(String(rd.result));
+      if(!o || o.app!=='tryapp' || !o.roster || !o.roster.teams) throw 0;
+      S.roster = o.roster; S.saved = o.saved || {}; S.boards = o.boards || {}; S.originals = o.originals || {}; if(o.settings && o.settings.nameMode) S.settings.nameMode = o.settings.nameMode; S.settings.sample = false;
+      save(); draftFromRoster(); renderTeacher(); $('dataMsg').textContent = '読み込みました（'+S.roster.teams.length+'チーム）。'; $('sampleFlag').hidden = true;
+    }catch(e){ $('dataMsg').textContent = 'このアプリで書き出したファイルではないようです。'; }
+    $('importIn').value = '';
+  };
+  rd.readAsText(f);
+});
+
+/* ---------- boot ---------- */
+setupPen($('boardCourt'));
+setMode('move');
+show('home');
+})();
+</script>
