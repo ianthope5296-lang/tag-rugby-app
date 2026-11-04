@@ -75,7 +75,7 @@ h3{font-size:17px}
 /* board */
 .board{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
 .court-col{flex:1 1 380px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:8px}
-.court-wrap{position:relative;width:min(100%, calc((100vh - 150px) * 400 / 560));width:min(100%, calc((100svh - 150px) * 400 / 560));aspect-ratio:400/560;max-width:100%;
+.court-wrap{isolation:isolate;position:relative;width:min(100%, calc((100vh - 150px) * 400 / 560));width:min(100%, calc((100svh - 150px) * 400 / 560));aspect-ratio:400/560;max-width:100%;
   touch-action:none;user-select:none;-webkit-user-select:none;border-radius:8px;overflow:hidden;border:2px solid var(--field-ink)}
 .court-wrap svg.court,.court-wrap svg.ink{position:absolute;inset:0;width:100%;height:100%}
 .court-wrap svg.ink{pointer-events:none}
@@ -170,25 +170,56 @@ td select{min-height:40px}
 .vid-item .grow b{font-size:16px}
 #rateRow .btn{min-width:64px}
 @media (prefers-reduced-motion: reduce){ .rec-badge .rec-dot{animation:none} }
-/* compare */
-.cmp{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,1fr);gap:16px;align-items:start}
+/* compare: [道具] [どうが] [さくせん] の 3れつ。横向きで 1画面に おさめる */
+.cmp{display:grid;grid-template-columns:132px minmax(0,1fr) minmax(250px,300px);gap:14px;align-items:start}
+.cmp-tools{align-self:stretch;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.cmp-tools h4{margin:2px 2px 0;font-size:13px;color:var(--muted)}
+.cmp-tools .btn{justify-content:flex-start;padding:4px 8px;font-size:15px;width:100%;white-space:nowrap}
+.cmp-tools .btn.save{justify-content:center;white-space:normal;text-align:center;min-height:56px;margin-top:auto}
+.cmp-tools .sep{border-top:1px solid var(--line);margin:2px 0}
+.cmp-tools[data-drawing="false"] [data-tool].on{background:var(--surface);color:var(--fg);border-color:var(--fg)}
+.swatches{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.swatch{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:700;gap:1px;padding:2px}
+.swatch i{display:block;width:18px;height:18px;border-radius:50%;border:2px solid #1b201c}
+.swatch.on{border:3px solid var(--fg)}
+.swatch[disabled]{opacity:.55;cursor:not-allowed;border-style:dashed}
 .cmp-left,.cmp-right{display:flex;flex-direction:column;gap:10px;min-width:0}
-.cmp-right{align-items:stretch}
-.cmp-right .court-wrap{width:min(100%, calc((100vh - 330px) * 400 / 560));width:min(100%, calc((100svh - 330px) * 400 / 560));margin:0 auto}
+.cmp-right .court-wrap{width:min(100%, calc((100vh - 300px) * 400 / 560));width:min(100%, calc((100svh - 300px) * 400 / 560));margin:0 auto}
+.cmp-right select{width:100%}
+#cmpAnimCtl{gap:6px;flex-wrap:nowrap}
+#cmpAnimCtl .btn{flex:1;padding:6px 6px;white-space:nowrap}
 .cmp-right .timeline,.cmp-cap{width:100%}
-.cmp-cap{min-height:52px;font-size:18px}
+.cmp-cap{min-height:44px;font-size:17px;padding:4px 10px}
 .note-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none}
 .player-wrap.drawing .note-svg{pointer-events:auto;cursor:crosshair}
-.player-wrap.drawing,.court-wrap{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .player-wrap.drawing{outline:4px dashed var(--warm);outline-offset:3px}
-.vctl input[type=range]{flex:1 1 140px;min-width:100px;height:44px}
-.vtime{font-variant-numeric:tabular-nums;min-width:84px}
-.swatch i{display:inline-block;width:18px;height:18px;border-radius:50%;border:2px solid #1b201c}
-.note-list{display:flex;gap:10px;flex-wrap:wrap}
-.note-item{display:flex;flex-direction:column;gap:6px;width:180px;border:1.5px solid var(--line);border-radius:10px;padding:6px;font-size:13px}
-.note-item img{width:100%;border-radius:6px;display:block;background:#111}
-.note-item .row .btn{flex:1;padding:6px 8px;font-size:14px}
-@media (max-width:900px){ .cmp{grid-template-columns:1fr} .cmp-right .court-wrap{width:min(100%, 420px)} }
+.draw-tag{position:absolute;left:10px;top:10px;background:rgba(0,0,0,.65);color:#fff;font-weight:700;font-size:14px;padding:4px 10px;border-radius:8px;pointer-events:none}
+.vctl{flex-wrap:nowrap}
+.vctl .btn{white-space:nowrap}
+.vctl input[type=range]{flex:1 1 60px;min-width:40px;height:44px}
+.vctl select{width:auto;flex:none;max-width:170px}
+.vtime{font-variant-numeric:tabular-nums;white-space:nowrap}
+.note-strip{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:6px 10px;display:flex;gap:10px;align-items:center;min-height:72px}
+.note-strip b{font-size:13px;color:var(--muted);white-space:nowrap}
+.note-list{display:flex;gap:10px;overflow-x:auto;flex:1;min-width:0;padding:2px}
+.note-list .msg{margin:0}
+.note-thumb{position:relative;flex:none;width:118px;padding:0;border:2px solid var(--line);border-radius:8px;background:#111;overflow:hidden;min-height:44px}
+.note-thumb img{display:block;width:100%}
+.note-thumb span{position:absolute;left:4px;bottom:4px;background:rgba(0,0,0,.65);color:#fff;font-size:11px;border-radius:4px;padding:0 4px}
+.note-view{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
+.note-box{background:var(--surface);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;max-width:min(960px,100%);max-height:100%}
+.note-box img{max-width:100%;max-height:calc(100svh - 140px);object-fit:contain;border-radius:8px;display:block;margin:0 auto}
+@media (max-width:900px){
+  .cmp{grid-template-columns:1fr}
+  .cmp-left{order:1} .cmp-tools{order:2} .cmp-right{order:3}
+  .cmp-tools{flex-direction:row;flex-wrap:wrap;align-items:center}
+  .cmp-tools h4,.cmp-tools .sep{display:none}
+  .cmp-tools .btn{width:auto}
+  .cmp-tools .btn.save{margin-top:0;min-height:44px}
+  .swatches{display:flex;gap:6px} .swatch{width:56px}
+  .vctl{flex-wrap:wrap}
+  .cmp-right .court-wrap{width:min(100%, 420px)}
+}
 @media (max-width:640px){ .assign{grid-template-columns:repeat(3,minmax(0,1fr))} .tile{min-height:120px} }
 @media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto} }
 </style>
@@ -391,11 +422,32 @@ td select{min-height:40px}
   <!-- COMPARE: video + plan side by side, pause and draw -->
   <section class="view" id="v-cmp" hidden>
     <div class="cmp">
+      <div class="cmp-tools" id="drawTools" role="toolbar" aria-label="止めて かきこむ">
+        <h4>✏ かく</h4>
+        <button class="btn" type="button" data-tool="run" title="人が 走る（じっせん）"><svg width="26" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="currentColor" stroke-width="3"/><path d="M24 1L33 5L24 9z" fill="currentColor"/></svg>走る</button>
+        <button class="btn" type="button" data-tool="pass" title="ボールの パス（ピンクの てんせん）"><svg width="26" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="var(--pass)" stroke-width="3" stroke-dasharray="5 4"/><path d="M24 1L33 5L24 9z" fill="var(--pass)"/></svg>パス</button>
+        <button class="btn" type="button" data-tool="fake" title="パスする ふり（はいいろの てんせん）"><svg width="26" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="#8a8a8a" stroke-width="3" stroke-dasharray="2 4"/><path d="M24 1L33 5L24 9z" fill="#8a8a8a"/></svg>ふり</button>
+        <button class="btn" type="button" data-tool="circle" title="まるで かこむ">◯ まる</button>
+        <button class="btn" type="button" data-tool="ball" title="タッチした ところに ボールを おく"><svg width="24" height="18" viewBox="0 0 38 28" aria-hidden="true"><g transform="rotate(-22 19 14)"><ellipse cx="19" cy="14" rx="16" ry="10" fill="#e0457b" stroke="#ffffff" stroke-width="2"/><path d="M6 14Q19 8 32 14" fill="none" stroke="#ffffff" stroke-width="1.6"/></g></svg>ボール</button>
+        <div class="sep"></div>
+        <h4>いろ</h4>
+        <div class="swatches" role="group" aria-label="いろ（走る・まる）" id="colorRow">
+          <button class="swatch" type="button" data-color="#1b1b1b"><i style="background:#1b1b1b;border-color:#ffffff;box-shadow:0 0 0 1.5px #1b1b1b"></i>くろ</button>
+          <button class="swatch" type="button" data-color="#ffd400"><i style="background:#ffd400"></i>きいろ</button>
+          <button class="swatch" type="button" data-color="#ff3b30"><i style="background:#ff3b30"></i>あか</button>
+          <button class="swatch" type="button" data-color="#ffffff"><i style="background:#ffffff"></i>しろ</button>
+        </div>
+        <div class="sep"></div>
+        <button class="btn" type="button" id="noteUndo">↶ 1つ けす</button>
+        <button class="btn danger" type="button" id="noteClear">ぜんぶ けす</button>
+        <button class="btn warm save" type="button" id="noteSave">📷 がぞうに<br>して ほぞん</button>
+      </div>
       <div class="cmp-left">
         <div class="player-wrap" id="cmpWrap">
           <video id="cmpVideo" playsinline muted preload="auto"></video>
           <svg class="note-svg" id="noteSvg" viewBox="0 0 16 9" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
           <div class="cam-msg" id="cmpMsg">よみこんで います…</div>
+          <div class="draw-tag" id="drawTag" hidden>✏ かきこみ ちゅう（▶ で もどる）</div>
         </div>
         <div class="row vctl">
           <button class="btn primary" type="button" id="cmpVPlay">▶ さいせい</button>
@@ -403,41 +455,15 @@ td select{min-height:40px}
           <button class="btn" type="button" id="cmpFwd" aria-label="すこし すすむ">すこし ▶</button>
           <input type="range" id="cmpSeek" min="0" max="1" step="0.05" value="0" aria-label="どうがの ばしょ">
           <span class="msg vtime" id="cmpTime">0:00</span>
+          <label class="msg" for="cmpRate" style="white-space:nowrap">はやさ</label><select id="cmpRate"></select>
         </div>
-        <div class="row" role="group" aria-label="さいせいの はやさ" id="cmpRates"></div>
-        <div class="group">
-          <div class="row">
-            <h3 style="flex:1">止めて かきこむ</h3>
-            <button class="btn" type="button" id="drawBtn" aria-pressed="false">✏ かきこむ</button>
-          </div>
-          <div id="drawTools" hidden>
-            <div class="row" role="group" aria-label="かく もの">
-              <button class="btn" type="button" data-tool="run"><svg width="34" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="currentColor" stroke-width="3"/><path d="M24 1L33 5L24 9z" fill="currentColor"/></svg>人が 走る</button>
-              <button class="btn" type="button" data-tool="pass"><svg width="34" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="var(--pass)" stroke-width="3" stroke-dasharray="5 4"/><path d="M24 1L33 5L24 9z" fill="var(--pass)"/></svg>パス</button>
-              <button class="btn" type="button" data-tool="fake"><svg width="34" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="#8a8a8a" stroke-width="3" stroke-dasharray="2 4"/><path d="M24 1L33 5L24 9z" fill="#8a8a8a"/></svg>ふり</button>
-              <button class="btn" type="button" data-tool="circle">◯ まる</button>
-              <button class="btn" type="button" data-tool="ball"><svg width="30" height="22" viewBox="0 0 38 28" aria-hidden="true"><g transform="rotate(-22 19 14)"><ellipse cx="19" cy="14" rx="16" ry="10" fill="#e0457b" stroke="#ffffff" stroke-width="2"/><path d="M6 14Q19 8 32 14" fill="none" stroke="#ffffff" stroke-width="1.6"/></g></svg>ボールを おく</button>
-            </div>
-            <p class="msg" id="toolNote" style="margin:6px 0 0"></p>
-            <div class="row" role="group" aria-label="いろ" id="colorRow" style="margin-top:8px">
-              <button class="btn swatch" type="button" data-color="#1b1b1b"><i style="background:#1b1b1b;border-color:#ffffff;box-shadow:0 0 0 1.5px #1b1b1b"></i>くろ</button>
-              <button class="btn swatch" type="button" data-color="#ffd400"><i style="background:#ffd400"></i>きいろ</button>
-              <button class="btn swatch" type="button" data-color="#ff3b30"><i style="background:#ff3b30"></i>あか</button>
-              <button class="btn swatch" type="button" data-color="#ffffff"><i style="background:#ffffff"></i>しろ</button>
-            </div>
-            <div class="row" style="margin-top:8px">
-              <button class="btn ghost" type="button" id="noteUndo">1つ けす</button>
-              <button class="btn danger" type="button" id="noteClear">ぜんぶ けす</button>
-              <button class="btn warm" type="button" id="noteSave">がぞうに して ほぞん</button>
-            </div>
-          </div>
-          <p class="msg" id="drawHint">✏ を おすと どうがが 止まって、ゆびで 線や まるを かいたり、ボールを おいたり できます。</p>
+        <div class="note-strip">
+          <b>ほぞんした<br>がぞう</b>
           <div class="note-list" id="noteList"></div>
         </div>
       </div>
       <div class="cmp-right">
-        <label class="msg" for="cmpPlan">くらべる さくせん</label>
-        <select id="cmpPlan"></select>
+        <select id="cmpPlan" aria-label="くらべる さくせん"></select>
         <div class="row" id="cmpAnimCtl">
           <button class="btn primary" type="button" id="cmpPlay">▶ アニメ</button>
           <button class="btn" type="button" id="cmpReplay">もう一回</button>
@@ -446,6 +472,18 @@ td select{min-height:40px}
         <div class="caption cmp-cap" id="cmpCap"></div>
         <div class="court-wrap" id="cmpCourt"></div>
         <div class="timeline"><i id="cmpTl"></i></div>
+      </div>
+    </div>
+    <div class="note-view" id="noteView" hidden role="dialog" aria-modal="true" aria-label="ほぞんした がぞう">
+      <div class="note-box">
+        <img id="noteViewImg" alt="">
+        <div class="row">
+          <button class="btn primary" type="button" id="nvShare">しゃしんAppへ</button>
+          <button class="btn" type="button" id="nvGo">この 場面の どうがを 見る</button>
+          <button class="btn ghost" type="button" id="nvDel">けす</button>
+          <span style="flex:1"></span>
+          <button class="btn" type="button" id="nvClose">とじる</button>
+        </div>
       </div>
     </div>
   </section>
@@ -1506,7 +1544,7 @@ function enterCmp(){
   var r = cur.cmpVid; if(!r){ show('vids'); return; }
   CM.rec = r; CM.shapes = []; CM.saved = true; CM.playArmed = false; setDrawing(false); setTool(CM.tool); setColor(CM.color);
   $('cmpMsg').textContent = 'よみこんで います…'; $('cmpMsg').hidden = false; $('cmpVPlay').textContent = '▶ さいせい';
-  $('drawHint').textContent = '✏ を おすと どうがが 止まって、ゆびで 線や まるを かいたり、ボールを おいたり できます。'; $('noteList').textContent = '';
+  $('noteList').textContent = ''; closeNoteView();
   renderCmpRates(); fillPlanSelect(r); renderPlanSide(); loadNotes();
   getVideoBlob(r.id).then(function(blob){
     if(cur.view!=='cmp' || CM.rec!==r) return;
@@ -1515,6 +1553,7 @@ function enterCmp(){
   }).catch(function(){ $('cmpMsg').textContent = 'この どうがを ひらけませんでした'; });
 }
 function leaveCmp(){
+  closeNoteView();
   cmpStopAnim(); var v = $('cmpVideo'); v.pause(); v.removeAttribute('src'); try{ v.load(); }catch(e){}
   if(CM.url){ URL.revokeObjectURL(CM.url); CM.url = null; } CM.blob = null;
   CM.noteUrls.forEach(function(u){ URL.revokeObjectURL(u); }); CM.noteUrls = []; CM.notes = [];
@@ -1523,7 +1562,9 @@ function leaveCmp(){
 /* --- video side --- */
 function vDur(){ var v = $('cmpVideo'); return isFinite(v.duration) && v.duration > 0 ? v.duration : (CM.rec ? CM.rec.dur : 0); }
 function applyCmpRate(){ var v = $('cmpVideo'); v.defaultPlaybackRate = CM.rate; v.playbackRate = CM.rate; }
-function renderCmpRates(){ rateRow($('cmpRates'), CM.rate, function(x){ CM.rate = x; applyCmpRate(); renderCmpRates(); }); }
+function renderCmpRates(){ var s = $('cmpRate'); s.textContent = '';
+  RATES.forEach(function(r){ var o = el('option',{value:String(r[0])}, r[1]+' '+r[2]); if(r[0]===CM.rate) o.selected = true; s.appendChild(o); }); }
+$('cmpRate').addEventListener('change', function(){ CM.rate = +$('cmpRate').value; applyCmpRate(); });
 $('cmpVideo').addEventListener('loadedmetadata', function(){
   var v = $('cmpVideo'); CM.vw = v.videoWidth || 16; CM.vh = v.videoHeight || 9;
   $('noteSvg').setAttribute('viewBox', '0 0 '+CM.vw+' '+CM.vh); $('cmpSeek').max = String(vDur()); applyCmpRate(); renderShapes();
@@ -1555,19 +1596,17 @@ $('cmpSeek').addEventListener('input', function(){ var v = $('cmpVideo'); if(!CM
 
 /* --- drawing on the paused video --- */
 function setDrawing(on){
-  CM.drawing = on; $('cmpWrap').classList.toggle('drawing', on); $('drawTools').hidden = !on;
-  $('drawBtn').classList.toggle('on', on); $('drawBtn').setAttribute('aria-pressed', String(on));
-  $('drawBtn').textContent = on ? '✓ かきこみ ちゅう' : '✏ かきこむ';
+  CM.drawing = on; $('cmpWrap').classList.toggle('drawing', on); $('drawTag').hidden = !on;
+  $('drawTools').dataset.drawing = String(on);
   if(on){ var v = $('cmpVideo'); if(!v.paused) v.pause(); }
 }
-var TOOL_NOTE = {run:'人が 走る 線（お手本と おなじ じっせん）。いろを えらべます。', pass:'ボールの パス（お手本と おなじ ピンクの てんせん）。', fake:'パスする ふり（お手本と おなじ はいいろの てんせん）。',
-  circle:'見てほしい ところを まるで かこみます。いろを えらべます。', ball:'おきたい ところを タッチ。ゆびを うごかすと ボールも うごきます。'};
+/* 道具を おすと、どうがが 止まって すぐ かける。▶ さいせい で かきこみを おわる */
 function setTool(t){ CM.tool = t;
   document.querySelectorAll('#drawTools [data-tool]').forEach(function(b){ var on = b.dataset.tool===t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
-  $('colorRow').hidden = !(t==='run' || t==='circle'); $('toolNote').textContent = TOOL_NOTE[t] || ''; }
+  var colorable = (t==='run' || t==='circle');
+  document.querySelectorAll('.swatch').forEach(function(b){ b.disabled = !colorable; }); }
 function setColor(c){ CM.color = c; document.querySelectorAll('.swatch').forEach(function(b){ var on = b.dataset.color===c; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); }
-$('drawBtn').addEventListener('click', function(){ if(!CM.url) return; setDrawing(!CM.drawing); });
-document.querySelectorAll('#drawTools [data-tool]').forEach(function(b){ b.addEventListener('click', function(){ setTool(b.dataset.tool); }); });
+document.querySelectorAll('#drawTools [data-tool]').forEach(function(b){ b.addEventListener('click', function(){ setTool(b.dataset.tool); if(CM.url) setDrawing(true); }); });
 document.querySelectorAll('.swatch').forEach(function(b){ b.addEventListener('click', function(){ setColor(b.dataset.color); }); });
 function sw(){ return Math.max(3, Math.min(CM.vw, CM.vh) / 70); }
 /* 形の データ → 線の 形（SVGと キャンバスで 同じものを つかう） */
@@ -1674,7 +1713,7 @@ $('noteSave').addEventListener('click', function(){
   cv.toBlob(function(blob){
     if(!blob){ toast('がぞうに できませんでした'); return; }
     var rec = {id:'n'+Date.now(), videoId:r.id, teamId:r.teamId, at:new Date().toISOString(), t:t, blob:blob};
-    putNote(rec).then(function(){ CM.saved = true; toast('がぞうを ほぞんしました。下から しゃしんAppにも 入れられます'); loadNotes(); })
+    putNote(rec).then(function(){ CM.saved = true; toast('がぞうを ほぞんしました。下の がぞうを タッチすると しゃしんAppにも 入れられます'); loadNotes(); })
       .catch(function(){ toast('ほぞん できませんでした（いっぱいかも）'); });
   }, 'image/jpeg', 0.9);
 });
@@ -1687,23 +1726,32 @@ function loadNotes(){
     CM.notes = l.sort(function(a,b){ return a.at < b.at ? 1 : -1; }); renderNotes();
   }).catch(function(){});
 }
+var toastMsg = {set textContent(v){ toast(v); }};
 function renderNotes(){
   var box = $('noteList'); box.textContent = '';
+  if(!CM.notes.length){ box.appendChild(el('p',{class:'msg'},'まだ ありません。かいたら「がぞうに して ほぞん」を おしてね。')); return; }
   CM.notes.forEach(function(n){
-    var it = el('div',{class:'note-item'}), u = URL.createObjectURL(n.blob); CM.noteUrls.push(u);
-    var img = el('img',{src:u, alt:mmss(n.t)+' の かきこみ'}); it.appendChild(img);
-    var go = el('button',{class:'btn ghost', type:'button'}, mmss(n.t)+' を 見る');
-    go.addEventListener('click', function(){ if(!okToMove()) return; var v = $('cmpVideo'); v.pause(); v.currentTime = n.t; });
-    it.appendChild(go);
-    var row = el('div',{class:'row'}), sv = el('button',{class:'btn', type:'button'}, 'しゃしんAppへ'), del = el('button',{class:'btn ghost', type:'button'}, 'けす'), armed = false;
-    sv.addEventListener('click', function(){ shareOrSave(noteFileName(CM.rec, n), n.blob, 'image/jpeg', $('drawHint')); });
-    del.addEventListener('click', function(){
-      if(!armed){ armed = true; del.textContent = 'もう一ど'; setTimeout(function(){ armed = false; del.textContent = 'けす'; }, 3000); return; }
-      delNote(n.id).then(loadNotes).catch(function(){ toast('けせませんでした'); });
-    });
-    row.appendChild(sv); row.appendChild(del); it.appendChild(row); box.appendChild(it);
+    var u = URL.createObjectURL(n.blob); CM.noteUrls.push(u);
+    var b = el('button',{class:'note-thumb', type:'button', 'aria-label':mmss(n.t)+' の かきこみを 大きく 見る'});
+    b.appendChild(el('img',{src:u, alt:''})); b.appendChild(el('span',{}, mmss(n.t)));
+    b.addEventListener('click', function(){ openNoteView(n, u); });
+    box.appendChild(b);
   });
 }
+/* ほぞんした がぞうを 大きく 見る。ここから しゃしんAppへ・その場面へ・けす */
+var NV = {n:null, armed:false, tm:0};
+function openNoteView(n, u){ NV.n = n; NV.armed = false; $('nvDel').textContent = 'けす'; $('noteViewImg').src = u; $('noteViewImg').alt = mmss(n.t)+' の かきこみ'; $('noteView').hidden = false; $('nvClose').focus(); }
+function closeNoteView(){ $('noteView').hidden = true; NV.n = null; $('noteViewImg').removeAttribute('src'); }
+$('nvClose').addEventListener('click', closeNoteView);
+$('noteView').addEventListener('click', function(e){ if(e.target === $('noteView')) closeNoteView(); });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !$('noteView').hidden) closeNoteView(); });
+$('nvShare').addEventListener('click', function(){ if(NV.n) shareOrSave(noteFileName(CM.rec, NV.n), NV.n.blob, 'image/jpeg', toastMsg); });
+$('nvGo').addEventListener('click', function(){ var n = NV.n; if(!n) return; closeNoteView(); if(!okToMove()) return; var v = $('cmpVideo'); v.pause(); v.currentTime = n.t; });
+$('nvDel').addEventListener('click', function(){
+  var n = NV.n; if(!n) return;
+  if(!NV.armed){ NV.armed = true; $('nvDel').textContent = 'もう一ど おすと けす'; clearTimeout(NV.tm); NV.tm = setTimeout(function(){ NV.armed = false; $('nvDel').textContent = 'けす'; }, 3000); return; }
+  closeNoteView(); delNote(n.id).then(function(){ toast('けしました'); loadNotes(); }).catch(function(){ toast('けせませんでした'); });
+});
 
 /* --- plan side: the play's animation, or an original play's arrows --- */
 function fillPlanSelect(r){
