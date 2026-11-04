@@ -75,7 +75,7 @@ h3{font-size:17px}
 /* board */
 .board{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
 .court-col{flex:1 1 380px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:8px}
-.court-wrap{position:relative;width:min(100%, calc((100vh - 150px) * 400 / 560));aspect-ratio:400/560;max-width:100%;
+.court-wrap{position:relative;width:min(100%, calc((100vh - 150px) * 400 / 560));width:min(100%, calc((100svh - 150px) * 400 / 560));aspect-ratio:400/560;max-width:100%;
   touch-action:none;user-select:none;-webkit-user-select:none;border-radius:8px;overflow:hidden;border:2px solid var(--field-ink)}
 .court-wrap svg.court,.court-wrap svg.ink{position:absolute;inset:0;width:100%;height:100%}
 .court-wrap svg.ink{pointer-events:none}
@@ -96,6 +96,7 @@ h3{font-size:17px}
 .ball{z-index:1000}
 .tok.dragging{z-index:2000 !important}
 .bubble{z-index:3000}
+.anim .court-wrap{width:min(100%, calc((100vh - 250px) * 400 / 560));width:min(100%, calc((100svh - 250px) * 400 / 560))}
 .anim-legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:14px;color:var(--muted);align-items:center}
 .anim-legend span{display:inline-flex;align-items:center;gap:6px}
 .person svg{display:block;width:100%;height:100%}
@@ -173,7 +174,7 @@ td select{min-height:40px}
 .cmp{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,1fr);gap:16px;align-items:start}
 .cmp-left,.cmp-right{display:flex;flex-direction:column;gap:10px;min-width:0}
 .cmp-right{align-items:stretch}
-.cmp-right .court-wrap{width:min(100%, calc((100vh - 260px) * 400 / 560));margin:0 auto}
+.cmp-right .court-wrap{width:min(100%, calc((100vh - 330px) * 400 / 560));width:min(100%, calc((100svh - 330px) * 400 / 560));margin:0 auto}
 .cmp-right .timeline,.cmp-cap{width:100%}
 .cmp-cap{min-height:52px;font-size:18px}
 .note-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none}
@@ -411,10 +412,15 @@ td select{min-height:40px}
           </div>
           <div id="drawTools" hidden>
             <div class="row" role="group" aria-label="かく もの">
-              <button class="btn" type="button" data-tool="arrow" id="tArrow">→ やじるし</button>
-              <button class="btn" type="button" data-tool="circle" id="tCircle">◯ まる</button>
+              <button class="btn" type="button" data-tool="run"><svg width="34" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="currentColor" stroke-width="3"/><path d="M24 1L33 5L24 9z" fill="currentColor"/></svg>人が 走る</button>
+              <button class="btn" type="button" data-tool="pass"><svg width="34" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="var(--pass)" stroke-width="3" stroke-dasharray="5 4"/><path d="M24 1L33 5L24 9z" fill="var(--pass)"/></svg>パス</button>
+              <button class="btn" type="button" data-tool="fake"><svg width="34" height="10" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5H26" stroke="#8a8a8a" stroke-width="3" stroke-dasharray="2 4"/><path d="M24 1L33 5L24 9z" fill="#8a8a8a"/></svg>ふり</button>
+              <button class="btn" type="button" data-tool="circle">◯ まる</button>
+              <button class="btn" type="button" data-tool="ball"><svg width="30" height="22" viewBox="0 0 38 28" aria-hidden="true"><g transform="rotate(-22 19 14)"><ellipse cx="19" cy="14" rx="16" ry="10" fill="#e0457b" stroke="#ffffff" stroke-width="2"/><path d="M6 14Q19 8 32 14" fill="none" stroke="#ffffff" stroke-width="1.6"/></g></svg>ボールを おく</button>
             </div>
-            <div class="row" role="group" aria-label="いろ" style="margin-top:8px">
+            <p class="msg" id="toolNote" style="margin:6px 0 0"></p>
+            <div class="row" role="group" aria-label="いろ" id="colorRow" style="margin-top:8px">
+              <button class="btn swatch" type="button" data-color="#1b1b1b"><i style="background:#1b1b1b;border-color:#ffffff;box-shadow:0 0 0 1.5px #1b1b1b"></i>くろ</button>
               <button class="btn swatch" type="button" data-color="#ffd400"><i style="background:#ffd400"></i>きいろ</button>
               <button class="btn swatch" type="button" data-color="#ff3b30"><i style="background:#ff3b30"></i>あか</button>
               <button class="btn swatch" type="button" data-color="#ffffff"><i style="background:#ffffff"></i>しろ</button>
@@ -425,21 +431,21 @@ td select{min-height:40px}
               <button class="btn warm" type="button" id="noteSave">がぞうに して ほぞん</button>
             </div>
           </div>
-          <p class="msg" id="drawHint">✏ を おすと どうがが 止まって、ゆびで やじるしや まるを かけます。</p>
+          <p class="msg" id="drawHint">✏ を おすと どうがが 止まって、ゆびで 線や まるを かいたり、ボールを おいたり できます。</p>
           <div class="note-list" id="noteList"></div>
         </div>
       </div>
       <div class="cmp-right">
         <label class="msg" for="cmpPlan">くらべる さくせん</label>
         <select id="cmpPlan"></select>
-        <div class="caption cmp-cap" id="cmpCap"></div>
-        <div class="court-wrap" id="cmpCourt"></div>
-        <div class="timeline"><i id="cmpTl"></i></div>
         <div class="row" id="cmpAnimCtl">
           <button class="btn primary" type="button" id="cmpPlay">▶ アニメ</button>
           <button class="btn" type="button" id="cmpReplay">もう一回</button>
           <button class="btn" type="button" id="cmpSlow" aria-pressed="false">ゆっくり</button>
         </div>
+        <div class="caption cmp-cap" id="cmpCap"></div>
+        <div class="court-wrap" id="cmpCourt"></div>
+        <div class="timeline"><i id="cmpTl"></i></div>
       </div>
     </div>
   </section>
@@ -1063,6 +1069,7 @@ function renderAnim(){
   $('showName').disabled = !cur.teamId;
   var t = cur.teamId ? team(cur.teamId) : null;
   buildAnimCourt($('animCourt'), c, cur.anim.names && t ? boardState() : null);
+  uniqMarkers($('animCourt'), 'A');
   $('showNum').classList.toggle('on', !cur.anim.names); $('showName').classList.toggle('on', cur.anim.names);
   $('slowBtn').classList.toggle('on', cur.anim.slow); $('slowBtn').setAttribute('aria-pressed', String(cur.anim.slow));
   frame(c, cur.anim.t);
@@ -1487,7 +1494,7 @@ $('vidCmp').addEventListener('click', function(){ if(!V.sel) return; cur.cmpVid 
 
 /* ---------- compare: video + plan side by side, pause and draw ---------- */
 var CM = {rec:null, blob:null, url:null, rate:1, vw:16, vh:9, plan:'', t:0, playing:false, slow:false, raf:0, last:0,
-  drawing:false, tool:'arrow', color:'#ffd400', shapes:[], saved:true, playArmed:false, notes:[], noteUrls:[]};
+  drawing:false, tool:'run', color:'#1b1b1b', shapes:[], saved:true, playArmed:false, notes:[], noteUrls:[]};
 var NS = 'http://www.w3.org/2000/svg';
 function origOf(r){ if(!r.origId) return null; var l = (S.originals||{})[r.teamId] || []; for(var i=0;i<l.length;i++){ if(l[i].id===r.origId) return l[i]; } return null; }
 /* 同じ画面に コートが いくつか あるので、やじるしの 先の id を この コートだけの ものに する */
@@ -1499,7 +1506,7 @@ function enterCmp(){
   var r = cur.cmpVid; if(!r){ show('vids'); return; }
   CM.rec = r; CM.shapes = []; CM.saved = true; CM.playArmed = false; setDrawing(false); setTool(CM.tool); setColor(CM.color);
   $('cmpMsg').textContent = 'よみこんで います…'; $('cmpMsg').hidden = false; $('cmpVPlay').textContent = '▶ さいせい';
-  $('drawHint').textContent = '✏ を おすと どうがが 止まって、ゆびで やじるしや まるを かけます。'; $('noteList').textContent = '';
+  $('drawHint').textContent = '✏ を おすと どうがが 止まって、ゆびで 線や まるを かいたり、ボールを おいたり できます。'; $('noteList').textContent = '';
   renderCmpRates(); fillPlanSelect(r); renderPlanSide(); loadNotes();
   getVideoBlob(r.id).then(function(blob){
     if(cur.view!=='cmp' || CM.rec!==r) return;
@@ -1553,16 +1560,28 @@ function setDrawing(on){
   $('drawBtn').textContent = on ? '✓ かきこみ ちゅう' : '✏ かきこむ';
   if(on){ var v = $('cmpVideo'); if(!v.paused) v.pause(); }
 }
-function setTool(t){ CM.tool = t; [['tArrow','arrow'],['tCircle','circle']].forEach(function(x){ var b = $(x[0]); b.classList.toggle('on', x[1]===t); b.setAttribute('aria-pressed', String(x[1]===t)); }); }
+var TOOL_NOTE = {run:'人が 走る 線（お手本と おなじ じっせん）。いろを えらべます。', pass:'ボールの パス（お手本と おなじ ピンクの てんせん）。', fake:'パスする ふり（お手本と おなじ はいいろの てんせん）。',
+  circle:'見てほしい ところを まるで かこみます。いろを えらべます。', ball:'おきたい ところを タッチ。ゆびを うごかすと ボールも うごきます。'};
+function setTool(t){ CM.tool = t;
+  document.querySelectorAll('#drawTools [data-tool]').forEach(function(b){ var on = b.dataset.tool===t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+  $('colorRow').hidden = !(t==='run' || t==='circle'); $('toolNote').textContent = TOOL_NOTE[t] || ''; }
 function setColor(c){ CM.color = c; document.querySelectorAll('.swatch').forEach(function(b){ var on = b.dataset.color===c; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); }
 $('drawBtn').addEventListener('click', function(){ if(!CM.url) return; setDrawing(!CM.drawing); });
-$('tArrow').addEventListener('click', function(){ setTool('arrow'); });
-$('tCircle').addEventListener('click', function(){ setTool('circle'); });
+document.querySelectorAll('#drawTools [data-tool]').forEach(function(b){ b.addEventListener('click', function(){ setTool(b.dataset.tool); }); });
 document.querySelectorAll('.swatch').forEach(function(b){ b.addEventListener('click', function(){ setColor(b.dataset.color); }); });
 function sw(){ return Math.max(3, Math.min(CM.vw, CM.vh) / 70); }
 /* 形の データ → 線の 形（SVGと キャンバスで 同じものを つかう） */
+/* 線の 見た目は お手本と そろえる：走る＝じっせん、パス＝ピンクの てんせん、ふり＝はいいろの てんせん */
+var INK = '#1b1b1b', PASS_C = '#e0457b', FAKE_C = '#a8a8a8';
+function shapeStyle(sh){
+  var w = sw(), color = sh.type==='pass' ? PASS_C : sh.type==='fake' ? FAKE_C : sh.color;
+  return {color:color, halo: color===INK ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.55)',
+    dash: sh.type==='pass' ? [w*2.2, w*1.7] : sh.type==='fake' ? [0.01, w*1.8] : null};
+}
+function ballK(){ return sw()*7.5/38; }
 function shapeGeom(sh){
   var w = sw();
+  if(sh.type==='ball') return {ball:sh.pts[0]};
   if(sh.type==='circle'){
     var xs = sh.pts.map(function(p){ return p[0]; }), ys = sh.pts.map(function(p){ return p[1]; });
     var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
@@ -1572,16 +1591,26 @@ function shapeGeom(sh){
   var head = [[b[0]+Math.cos(ang)*L*0.35, b[1]+Math.sin(ang)*L*0.35], [b[0]+Math.cos(ang+2.6)*L, b[1]+Math.sin(ang+2.6)*L], [b[0]+Math.cos(ang-2.6)*L, b[1]+Math.sin(ang-2.6)*L]];
   return {d:smoothD(pts), head:head};
 }
+function svgBall(p){
+  var k = ballK(), g = document.createElementNS(NS, 'g');
+  g.setAttribute('transform', 'translate('+(p[0]-19*k).toFixed(1)+' '+(p[1]-14*k).toFixed(1)+') scale('+k.toFixed(3)+')');
+  g.innerHTML = '<g transform="rotate(-22 19 14)"><ellipse cx="19" cy="14" rx="16" ry="10" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="5"/>'+
+    '<ellipse cx="19" cy="14" rx="16" ry="10" fill="#e0457b" stroke="#ffffff" stroke-width="2"/><path d="M6 14Q19 8 32 14" fill="none" stroke="#ffffff" stroke-width="1.6"/>'+
+    '<path d="M15 9.6v3.6M19 9v3.6M23 9.6v3.6" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round"/></g>';
+  return g;
+}
 function svgShape(sh, live){
-  var g = document.createElementNS(NS, 'g'), w = sw(), geo = live ? {d:pathD(sh.pts)} : shapeGeom(sh);
-  [['rgba(0,0,0,.55)', w*1.9], [sh.color, w]].forEach(function(st){
+  if(sh.type==='ball') return svgBall(sh.pts[0]);
+  var g = document.createElementNS(NS, 'g'), w = sw(), geo = live ? {d:pathD(sh.pts)} : shapeGeom(sh), stl = shapeStyle(sh);
+  [[stl.halo, w*1.9], [stl.color, w]].forEach(function(st){
     var e;
     if(geo.ellipse){ e = document.createElementNS(NS, 'ellipse'); e.setAttribute('cx', geo.ellipse[0]); e.setAttribute('cy', geo.ellipse[1]); e.setAttribute('rx', geo.ellipse[2]); e.setAttribute('ry', geo.ellipse[3]); }
     else { e = document.createElementNS(NS, 'path'); e.setAttribute('d', geo.d); }
     e.setAttribute('fill', 'none'); e.setAttribute('stroke', st[0]); e.setAttribute('stroke-width', st[1]); e.setAttribute('stroke-linecap', 'round'); e.setAttribute('stroke-linejoin', 'round');
+    if(stl.dash && !geo.ellipse) e.setAttribute('stroke-dasharray', stl.dash.map(function(x){ return x.toFixed(1); }).join(' '));
     g.appendChild(e);
-    if(geo.head){ var h = document.createElementNS(NS, 'polygon'); h.setAttribute('points', geo.head.map(function(p){ return p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' '));
-      h.setAttribute('fill', st[0]===sh.color ? sh.color : 'rgba(0,0,0,.55)'); h.setAttribute('stroke', st[0]); h.setAttribute('stroke-width', st[0]===sh.color ? 1 : w*0.9); h.setAttribute('stroke-linejoin', 'round'); g.appendChild(h); }
+    if(geo.head){ var main = st[0]===stl.color, h = document.createElementNS(NS, 'polygon'); h.setAttribute('points', geo.head.map(function(p){ return p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' '));
+      h.setAttribute('fill', st[0]); h.setAttribute('stroke', st[0]); h.setAttribute('stroke-width', main ? 1 : w*0.9); h.setAttribute('stroke-linejoin', 'round'); g.appendChild(h); }
   });
   return g;
 }
@@ -1592,10 +1621,13 @@ $('noteSvg').addEventListener('pointerdown', function(e){
   if(!CM.drawing) return; e.preventDefault();
   var s = $('noteSvg'); try{ s.setPointerCapture(e.pointerId); }catch(_){}
   var sh = {type:CM.tool, color:CM.color, pts:[toVideo(e)]}, live = svgShape(sh, true); s.appendChild(live);
-  function mv(ev){ var p = toVideo(ev), l = sh.pts[sh.pts.length-1]; if(Math.hypot(p[0]-l[0], p[1]-l[1]) > sw()*0.6){ sh.pts.push(p); s.replaceChild(svgShape(sh, true), live); live = s.lastChild; } }
+  if(sh.type==='ball'){ CM.shapes.push(sh); CM.saved = false; }
+  function mv(ev){ var p = toVideo(ev);
+    if(sh.type==='ball'){ sh.pts[0] = p; var nb = svgShape(sh); s.replaceChild(nb, live); live = nb; return; }
+    var l = sh.pts[sh.pts.length-1]; if(Math.hypot(p[0]-l[0], p[1]-l[1]) > sw()*0.6){ sh.pts.push(p); var nl = svgShape(sh, true); s.replaceChild(nl, live); live = nl; } }
   function up(){ s.removeEventListener('pointermove', mv); s.removeEventListener('pointerup', up); s.removeEventListener('pointercancel', up);
     var a = sh.pts[0], z = sh.pts[sh.pts.length-1], far = 0; sh.pts.forEach(function(p){ far = Math.max(far, Math.hypot(p[0]-a[0], p[1]-a[1])); });
-    if(sh.type==='arrow' && Math.hypot(z[0]-a[0], z[1]-a[1]) > sw()*3){ sh.pts = simplify(sh.pts, sw()*2.5); CM.shapes.push(sh); CM.saved = false; }
+    if((sh.type==='run' || sh.type==='pass' || sh.type==='fake') && Math.hypot(z[0]-a[0], z[1]-a[1]) > sw()*3){ sh.pts = simplify(sh.pts, sw()*2.5); CM.shapes.push(sh); CM.saved = false; }
     else if(sh.type==='circle' && far > sw()*3){ CM.shapes.push(sh); CM.saved = false; }
     renderShapes(); }
   s.addEventListener('pointermove', mv); s.addEventListener('pointerup', up); s.addEventListener('pointercancel', up);
@@ -1608,19 +1640,29 @@ $('noteUndo').addEventListener('click', function(){ CM.shapes.pop(); renderShape
     armed = false; bt.textContent = 'ぜんぶ けす'; CM.shapes = []; CM.saved = true; renderShapes();
   }); })();
 /* 止めた 画面と かいた ものを 1まいの 画像（JPEG）に する */
+function canvasBall(g, p){
+  var k = ballK(); g.save(); g.setLineDash([]);
+  g.translate(p[0]-19*k, p[1]-14*k); g.scale(k, k); g.translate(19, 14); g.rotate(-22*Math.PI/180); g.translate(-19, -14);
+  g.beginPath(); g.ellipse(19, 14, 16, 10, 0, 0, Math.PI*2); g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 5; g.stroke();
+  g.fillStyle = '#e0457b'; g.fill(); g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.stroke();
+  g.lineWidth = 1.6; g.lineCap = 'round'; g.stroke(new Path2D('M6 14Q19 8 32 14')); g.stroke(new Path2D('M15 9.6v3.6M19 9v3.6M23 9.6v3.6'));
+  g.restore();
+}
 function canvasShape(g, sh){
-  var w = sw(), geo = shapeGeom(sh);
-  [['rgba(0,0,0,.55)', w*1.9], [sh.color, w]].forEach(function(st){
+  if(sh.type==='ball'){ canvasBall(g, sh.pts[0]); return; }
+  var w = sw(), geo = shapeGeom(sh), stl = shapeStyle(sh);
+  [[stl.halo, w*1.9], [stl.color, w]].forEach(function(st){
     g.strokeStyle = st[0]; g.lineWidth = st[1]; g.lineCap = 'round'; g.lineJoin = 'round';
-    if(geo.ellipse){ g.beginPath(); g.ellipse(geo.ellipse[0], geo.ellipse[1], geo.ellipse[2], geo.ellipse[3], 0, 0, Math.PI*2); g.stroke(); }
-    else { g.stroke(new Path2D(geo.d));
+    if(geo.ellipse){ g.setLineDash([]); g.beginPath(); g.ellipse(geo.ellipse[0], geo.ellipse[1], geo.ellipse[2], geo.ellipse[3], 0, 0, Math.PI*2); g.stroke(); }
+    else { g.setLineDash(stl.dash || []); g.stroke(new Path2D(geo.d)); g.setLineDash([]);
+      var main = st[0]===stl.color;
       g.beginPath(); geo.head.forEach(function(p, i){ if(i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); }); g.closePath();
-      g.fillStyle = st[0]===sh.color ? sh.color : 'rgba(0,0,0,.55)'; g.lineWidth = st[0]===sh.color ? 1 : w*0.9; g.stroke(); g.fill(); }
+      g.fillStyle = st[0]; g.lineWidth = main ? 1 : w*0.9; g.stroke(); g.fill(); }
   });
 }
 $('noteSave').addEventListener('click', function(){
   var v = $('cmpVideo'), r = CM.rec; if(!r || !v.videoWidth){ toast('どうがを よみこんでから ほぞんしてね'); return; }
-  if(!CM.shapes.length){ toast('やじるしや まるを かいてから ほぞんしてね'); return; }
+  if(!CM.shapes.length){ toast('線や まるを かいてから ほぞんしてね'); return; }
   var cv = document.createElement('canvas'); cv.width = CM.vw; cv.height = CM.vh; var g = cv.getContext('2d');
   try{ g.drawImage(v, 0, 0, CM.vw, CM.vh); }catch(e){ toast('がぞうに できませんでした'); return; }
   CM.shapes.forEach(function(sh){ canvasShape(g, sh); });
