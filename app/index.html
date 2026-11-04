@@ -178,6 +178,7 @@ td select{min-height:40px}
 .cmp-cap{min-height:52px;font-size:18px}
 .note-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none}
 .player-wrap.drawing .note-svg{pointer-events:auto;cursor:crosshair}
+.player-wrap.drawing,.court-wrap{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .player-wrap.drawing{outline:4px dashed var(--warm);outline-offset:3px}
 .vctl input[type=range]{flex:1 1 140px;min-width:100px;height:44px}
 .vtime{font-variant-numeric:tabular-nums;min-width:84px}
@@ -1700,6 +1701,17 @@ function cmpStopAnim(){ cancelAnimationFrame(CM.raf); CM.raf = 0; CM.playing = f
 $('cmpPlay').addEventListener('click', function(){ if(CM.playing) cmpStopAnim(); else cmpPlayAnim(); });
 $('cmpReplay').addEventListener('click', function(){ cmpStopAnim(); CM.t = 0; cmpPlayAnim(); });
 $('cmpSlow').addEventListener('click', function(){ CM.slow = !CM.slow; $('cmpSlow').classList.toggle('on', CM.slow); $('cmpSlow').setAttribute('aria-pressed', String(CM.slow)); $('cmpSlow').textContent = CM.slow ? '✓ ゆっくり' : 'ゆっくり'; });
+
+/* iPadのSafariでは、指やペンで かくと ページが うごいたり 文字が えらばれたり する。
+   かいている あいだは、その うごきを 止める（touch-action だけでは きかないことが ある）。 */
+function guardTouch(node, active){
+  ['touchstart','touchmove'].forEach(function(ev){ node.addEventListener(ev, function(e){ if(active()) e.preventDefault(); }, {passive:false}); });
+  node.addEventListener('gesturestart', function(e){ if(active()) e.preventDefault(); });
+  node.addEventListener('contextmenu', function(e){ if(active()) e.preventDefault(); });
+  node.addEventListener('selectstart', function(e){ if(active()) e.preventDefault(); });
+}
+guardTouch($('cmpWrap'), function(){ return CM.drawing; });
+guardTouch($('boardCourt'), function(){ return cur.view==='board' && cur.mode!=='move'; });
 
 /* teacher: videos */
 function renderVidStat(){
