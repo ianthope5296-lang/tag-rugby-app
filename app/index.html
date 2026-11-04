@@ -146,6 +146,29 @@ td select{min-height:40px}
   padding:10px 18px;border-radius:12px;font-weight:700;z-index:50}
 .radio{display:flex;gap:16px;flex-wrap:wrap}
 .radio label{display:flex;gap:6px;align-items:center;min-height:44px}
+/* record / videos */
+.rec-dot{display:inline-block;width:16px;height:16px;border-radius:50%;background:#d42020;flex:none;border:2px solid #fff;box-shadow:0 0 0 1.5px #d42020}
+.cam-wrap,.player-wrap{position:relative;width:100%;aspect-ratio:16/9;background:#111;border-radius:12px;overflow:hidden;border:2px solid var(--field-ink)}
+.cam-wrap video,.player-wrap video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#111}
+.cam-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font-weight:700;font-size:18px;padding:16px;pointer-events:none}
+.rec-badge{position:absolute;left:12px;top:12px;background:rgba(0,0,0,.65);color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums}
+.rec-badge .rec-dot{animation:blink 1s steps(2,start) infinite}
+@keyframes blink{to{visibility:hidden}}
+.rec-ctrl{align-items:center;text-align:center}
+.rec-btn{width:132px;height:132px;border-radius:50%;border:6px solid var(--fg);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-weight:700;font-size:20px}
+.rec-btn .rec-shape{width:56px;height:56px;border-radius:50%;background:#d42020;transition:border-radius .15s,width .15s,height .15s}
+.rec-btn.on .rec-shape{width:44px;height:44px;border-radius:8px}
+.rec-btn[disabled]{opacity:.45;cursor:not-allowed}
+.meta-list{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:16px}
+.meta-list dt{color:var(--muted);font-size:14px}
+.meta-list dd{margin:0;font-weight:700}
+.vid-list{max-height:none}
+.vid-item{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:10px;padding:6px 8px;font-size:14px}
+.vid-item.sel{border-color:var(--accent);border-width:3px}
+.vid-item .grow{flex:1;min-width:0;text-align:left;background:none;border:0;padding:4px;min-height:44px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
+.vid-item .grow b{font-size:16px}
+#rateRow .btn{min-width:64px}
+@media (prefers-reduced-motion: reduce){ .rec-badge .rec-dot{animation:none} }
 @media (max-width:640px){ .assign{grid-template-columns:repeat(3,minmax(0,1fr))} .tile{min-height:120px} }
 @media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto} }
 </style>
@@ -170,9 +193,9 @@ td select{min-height:40px}
   <!-- HOME -->
   <section class="view" id="v-home">
     <div class="home">
-      <button class="tile main" type="button" id="goTeams"><span class="big">チームで つかう</span><span class="sub">さくせんボード・さくせんアニメ</span></button>
+      <button class="tile main" type="button" id="goTeams"><span class="big">チームで つかう</span><span class="sub">さくせんボード・アニメ・どうがを とる・ふりかえり</span></button>
       <button class="tile" type="button" disabled><span class="big">学習カード</span><span class="sub">試作4で つくります</span></button>
-      <button class="tile" type="button" id="goPin"><span class="big">先生</span><span class="sub">名簿の登録・表示の設定・データの書き出し</span></button>
+      <button class="tile" type="button" id="goPin"><span class="big">先生</span><span class="sub">名簿の登録・表示の設定・データの書き出し・動画の消去</span></button>
     </div>
     <p class="note" style="margin-top:16px">データは この端末の ブラウザの中にだけ 保存されます。ほかの端末や インターネットには 送られません。</p>
   </section>
@@ -193,6 +216,10 @@ td select{min-height:40px}
         </div>
       </div>
       <div class="panel">
+        <div class="row">
+          <button class="btn rec-go" type="button" id="goRec"><span class="rec-dot" aria-hidden="true"></span>どうがを とる</button>
+          <button class="btn" type="button" id="goVids">▶ ふりかえり どうが</button>
+        </div>
         <div class="card-slot" id="cardSlot"></div>
         <div class="group">
           <h3>さくせんカードを えらぶ</h3>
@@ -279,6 +306,67 @@ td select{min-height:40px}
     </div>
   </section>
 
+  <!-- RECORD -->
+  <section class="view" id="v-rec" hidden>
+    <div class="board">
+      <div class="court-col">
+        <div class="cam-wrap" id="camWrap">
+          <video id="camView" playsinline muted autoplay></video>
+          <div class="cam-msg" id="camMsg">カメラを じゅんび しています…</div>
+          <div class="rec-badge" id="recBadge" hidden><span class="rec-dot" aria-hidden="true"></span>とっています <b id="recTime">0:00</b> / 10:00</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="group">
+          <h3>この どうがに つく じょうほう</h3>
+          <dl class="meta-list" id="recMeta" style="margin:0"></dl>
+          <div class="row">
+            <label for="recPeriod" class="msg">何時間目</label>
+            <select id="recPeriod" style="width:auto"></select>
+          </div>
+        </div>
+        <div class="group rec-ctrl">
+          <button class="rec-btn" type="button" id="recBtn" disabled><span class="rec-shape" aria-hidden="true"></span><span id="recLabel">とる</span></button>
+          <p class="msg" id="recHint">10分で しぜんに とまります。</p>
+          <p class="msg err" id="spaceWarn" hidden></p>
+        </div>
+        <div class="group">
+          <h3>カメラが つかえない ときは</h3>
+          <p class="msg">iPadの カメラアプリで とった どうがを 入れられます。</p>
+          <label class="btn" for="vidFile">カメラアプリの どうがを 入れる</label>
+          <input id="vidFile" type="file" accept="video/*" hidden>
+        </div>
+        <button class="btn" type="button" id="recToVids">▶ ふりかえり どうがを 見る</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIDEOS -->
+  <section class="view" id="v-vids" hidden>
+    <div class="board">
+      <div class="court-col">
+        <div class="player-wrap" id="playerWrap">
+          <video id="player" playsinline controls preload="metadata"></video>
+          <div class="cam-msg" id="playerMsg">右の 一らんから えらんでね</div>
+        </div>
+        <div class="row" role="group" aria-label="さいせいの はやさ" id="rateRow"></div>
+      </div>
+      <div class="panel">
+        <div class="group" id="vidInfo" hidden>
+          <dl class="meta-list" id="vidMeta" style="margin:0"></dl>
+          <div class="row">
+            <button class="btn primary" type="button" id="vidExport">しゃしんAppや ファイルに ほぞん</button>
+          </div>
+          <p class="msg" id="vidMsg"></p>
+        </div>
+        <div class="group">
+          <h3>チームの どうが</h3>
+          <div class="saved-list vid-list" id="vidList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- PIN -->
   <section class="view" id="v-pin" hidden>
     <form class="pin-box" id="pinForm">
@@ -324,6 +412,10 @@ td select{min-height:40px}
           <button class="btn" type="button" id="copyExport">コピーする</button>
         </div>
         <p class="msg" id="dataMsg"></p>
+        <h2 style="margin-top:8px">撮影した動画</h2>
+        <p class="msg" id="vidStat">しらべています…</p>
+        <p class="msg">学期の終わりに、この端末の動画をすべて消します。残したい動画は、先に各チームの「ふりかえり どうが」から書き出してください。</p>
+        <div class="row"><button class="btn danger" type="button" id="vidWipe">動画をすべて消す</button></div>
       </div>
     </div>
     <div class="group" style="margin-top:16px">
@@ -463,20 +555,25 @@ function displayName(m){
 }
 
 /* ---------- navigation ---------- */
-var BACK = {teams:'home', board:'teams', anim:'board', pin:'home', teacher:'home'};
+var BACK = {teams:'home', board:'teams', anim:'board', pin:'home', teacher:'home', rec:'board', vids:'board'};
 function show(v){
   stopAnim();
+  if(cur.view==='rec' && v!=='rec') leaveRec();
+  if(cur.view==='vids' && v!=='vids') leaveVids();
   cur.view = v;
-  ['home','teams','board','anim','pin','teacher'].forEach(function(n){ $('v-'+n).hidden = (n!==v); });
+  ['home','teams','board','anim','rec','vids','pin','teacher'].forEach(function(n){ $('v-'+n).hidden = (n!==v); });
   $('backBtn').hidden = (v==='home');
   var t = cur.teamId ? team(cur.teamId) : null;
-  var crumbs = {home:'', teams:'チームを えらぶ', board: t ? 'チーム「'+t.name+'」の さくせんボード' : '', anim:'さくせんアニメ', pin:'先生メニュー', teacher:'先生メニュー'};
+  var crumbs = {home:'', teams:'チームを えらぶ', board: t ? 'チーム「'+t.name+'」の さくせんボード' : '', anim:'さくせんアニメ',
+    rec: t ? 'チーム「'+t.name+'」 どうがを とる' : '', vids: t ? 'チーム「'+t.name+'」 ふりかえり どうが' : '', pin:'先生メニュー', teacher:'先生メニュー'};
   $('crumb').textContent = crumbs[v] || '';
   $('sampleFlag').hidden = !S.settings.sample;
   if(v==='teams') renderTeams();
   if(v==='board') renderBoard();
   if(v==='anim') renderAnim();
-  if(v==='teacher') renderTeacher();
+  if(v==='rec') enterRec();
+  if(v==='vids') enterVids();
+  if(v==='teacher'){ renderTeacher(); renderVidStat(); }
   if(v==='pin'){ $('pinIn').value=''; $('pinMsg').hidden = true; setTimeout(function(){ $('pinIn').focus(); }, 50); }
   window.scrollTo(0,0);
 }
@@ -1061,6 +1158,249 @@ $('importIn').addEventListener('change', function(){
   };
   rd.readAsText(f);
 });
+
+/* ---------- video storage (IndexedDB) ----------
+   'videos'：一らん用の じょうほう（小さい）。'blobs'：どうが そのもの。
+   端末の中だけに ほぞんする。どこにも おくらない。 */
+var DB_NAME = 'tryapp-media', DB_VER = 1, dbP = null;
+function db(){
+  if(dbP) return dbP;
+  dbP = new Promise(function(res, rej){
+    if(!window.indexedDB){ rej(new Error('noidb')); return; }
+    var r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = function(){ var d = r.result;
+      if(!d.objectStoreNames.contains('videos')){ var s = d.createObjectStore('videos', {keyPath:'id'}); s.createIndex('team', 'teamId'); }
+      if(!d.objectStoreNames.contains('blobs')) d.createObjectStore('blobs', {keyPath:'id'}); };
+    r.onsuccess = function(){ res(r.result); };
+    r.onerror = function(){ rej(r.error); };
+  });
+  dbP.catch(function(){ dbP = null; });
+  return dbP;
+}
+function dbRun(stores, mode, fn){
+  return db().then(function(d){ return new Promise(function(res, rej){
+    var t = d.transaction(stores, mode); var req = fn(t);
+    t.oncomplete = function(){ res(req ? req.result : undefined); };
+    t.onerror = t.onabort = function(){ rej(t.error || new Error('tx')); };
+  }); });
+}
+function putVideo(meta, blob){
+  function put(rec){ return dbRun(['videos','blobs'], 'readwrite', function(t){ t.objectStore('blobs').put(rec); return t.objectStore('videos').put(meta); }); }
+  return put({id:meta.id, blob:blob}).catch(function(){
+    // 古いSafariで Blob を入れられないときは、ArrayBuffer にして入れる
+    return blob.arrayBuffer().then(function(buf){ return put({id:meta.id, buf:buf, type:blob.type}); });
+  });
+}
+function listVideos(teamId){ return dbRun(['videos'], 'readonly', function(t){ var s = t.objectStore('videos'); return teamId ? s.index('team').getAll(teamId) : s.getAll(); }); }
+function getVideoBlob(id){ return dbRun(['blobs'], 'readonly', function(t){ return t.objectStore('blobs').get(id); }).then(function(r){
+  if(!r) throw new Error('nofile'); return r.blob || new Blob([r.buf], {type:r.type||'video/mp4'}); }); }
+function delVideo(id){ return dbRun(['videos','blobs'], 'readwrite', function(t){ t.objectStore('blobs').delete(id); return t.objectStore('videos').delete(id); }); }
+function wipeVideos(){ return dbRun(['videos','blobs'], 'readwrite', function(t){ t.objectStore('blobs').clear(); return t.objectStore('videos').clear(); }); }
+
+var WEEK = ['日','月','火','水','木','金','土'];
+function ymd(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function dayLabel(s){ var p = s.split('-'); var d = new Date(+p[0], +p[1]-1, +p[2]); return (d.getMonth()+1)+'/'+d.getDate()+'（'+WEEK[d.getDay()]+'）'; }
+function mmss(sec){ sec = Math.max(0, Math.floor(sec||0)); return Math.floor(sec/60)+':'+('0'+(sec%60)).slice(-2); }
+function planLabel(r){ var c = r.card ? cardById(r.card) : null;
+  if(r.origName) return '★' + r.origName + (c ? '（もと：'+c.name+'）' : '');
+  return c ? c.name : 'さくせんカード なし'; }
+function mb(n){ if(n < 1e6) return '1MB未満'; return n >= 1e9 ? (n/1e9).toFixed(1)+'GB' : Math.round(n/1e6)+'MB'; }
+function metaRows(box, rows){ box.textContent = ''; rows.forEach(function(r){ box.appendChild(el('dt',{}, r[0])); box.appendChild(el('dd',{}, r[1])); }); }
+function fillPeriod(sel, val){ sel.textContent = ''; for(var i=1;i<=8;i++){ var o = el('option',{value:String(i)}, i+'時間目'); if(val===i) o.selected = true; sel.appendChild(o); } }
+
+/* ---------- record ---------- */
+var MAX_SEC = 600, BITRATE = 2000000; // 10分・2Mbps（10分で やく150MB）
+var R = {stream:null, mr:null, chunks:[], t0:0, timer:0, meta:null, dur:0, stopMsg:'', releaseAfter:false};
+function pickMime(){
+  if(!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+  var c = ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  for(var i=0;i<c.length;i++){ if(MediaRecorder.isTypeSupported(c[i])) return c[i]; } return '';
+}
+function recording(){ return !!(R.mr && R.mr.state !== 'inactive'); }
+function streamLive(){ return !!(R.stream && R.stream.getVideoTracks().some(function(t){ return t.readyState==='live'; })); }
+function releaseCam(){ if(R.stream){ R.stream.getTracks().forEach(function(t){ t.stop(); }); R.stream = null; } $('camView').srcObject = null; }
+function camFail(msg){ $('camMsg').textContent = msg; $('camMsg').hidden = false; $('recBtn').disabled = true; }
+function setRecUI(on){
+  $('recBtn').classList.toggle('on', on); $('recLabel').textContent = on ? 'とめる' : 'とる';
+  $('recBtn').setAttribute('aria-label', on ? 'とるのを とめる' : 'どうがを とりはじめる');
+  $('recBadge').hidden = !on; $('recPeriod').disabled = on; $('vidFile').disabled = on;
+  if(on) $('recTime').textContent = '0:00';
+}
+function renderRecMeta(){
+  var t = team(cur.teamId), b = boardState(), d = new Date();
+  metaRows($('recMeta'), [['チーム', t.name], ['日にち', dayLabel(ymd(d))], ['さくせん', planLabel({card:b.card, origName:b.origId ? b.origName : ''})]]);
+  fillPeriod($('recPeriod'), b.period);
+}
+$('recPeriod').addEventListener('change', function(){ var b = boardState(); b.period = +$('recPeriod').value; save(); });
+function snapshotMeta(source){
+  var t = team(cur.teamId), b = boardState(), d = new Date();
+  return {id:'v'+d.getTime(), teamId:t.id, teamName:t.name, at:d.toISOString(), date:ymd(d), period:b.period,
+    card:b.card||null, origId:b.origId||null, origName:b.origId ? (b.origName||'') : '', source:source, dur:0, mime:'', size:0};
+}
+function checkSpace(){
+  var w = $('spaceWarn'); w.hidden = true;
+  if(!navigator.storage || !navigator.storage.estimate) return;
+  navigator.storage.estimate().then(function(e){
+    if(!e.quota) return; var free = e.quota - (e.usage||0); var min = Math.floor(free / (BITRATE/8*60));
+    if(free < 400e6){ w.textContent = 'ほぞんできる ところが すくないです（あと やく'+Math.max(0,min)+'分）。先生に 言ってね。'; w.hidden = false; }
+  }).catch(function(){});
+}
+function enterRec(){
+  R.releaseAfter = false;
+  renderRecMeta(); setRecUI(recording()); checkSpace();
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  if(recording()) return;
+  if(streamLive()){ $('camMsg').hidden = true; $('recBtn').disabled = false; return; }
+  $('recBtn').disabled = true; $('camMsg').textContent = 'カメラを じゅんび しています…'; $('camMsg').hidden = false;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder){
+    camFail('この ブラウザでは カメラで とれません。「カメラアプリの どうがを 入れる」から 入れてね。'); return; }
+  navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}, frameRate:{ideal:30}}})
+    .then(function(st){
+      if(cur.view !== 'rec'){ st.getTracks().forEach(function(t){ t.stop(); }); return; }
+      R.stream = st; var v = $('camView'); v.srcObject = st; var p = v.play(); if(p && p.catch) p.catch(function(){});
+      $('camMsg').hidden = true; $('recBtn').disabled = false;
+    })
+    .catch(function(e){
+      camFail(e && (e.name==='NotAllowedError' || e.name==='SecurityError')
+        ? 'カメラを つかうことが ゆるされて いません。先生に 言ってね。'
+        : 'カメラが つかえませんでした。「カメラアプリの どうがを 入れる」から 入れてね。');
+    });
+}
+function leaveRec(){ if(recording()){ R.releaseAfter = true; stopRec('とちゅうで とめました'); } else releaseCam(); }
+function startRec(){
+  if(!streamLive()) return;
+  var opts = {videoBitsPerSecond:BITRATE}, m = pickMime(); if(m) opts.mimeType = m;
+  try{ R.mr = new MediaRecorder(R.stream, opts); }
+  catch(e){ try{ R.mr = new MediaRecorder(R.stream); }catch(e2){ camFail('この ブラウザでは とれません。「カメラアプリの どうがを 入れる」から 入れてね。'); return; } }
+  R.chunks = []; R.meta = snapshotMeta('camera'); R.stopMsg = '';
+  R.mr.ondataavailable = function(e){ if(e.data && e.data.size) R.chunks.push(e.data); };
+  R.mr.onstop = finishRec;
+  R.mr.start(1000); R.t0 = Date.now(); setRecUI(true);
+  R.timer = setInterval(function(){ var s = (Date.now()-R.t0)/1000; $('recTime').textContent = mmss(s); if(s >= MAX_SEC) stopRec('10分に なったので とめました'); }, 250);
+}
+function stopRec(msg){
+  if(!recording()) return;
+  R.stopMsg = msg || ''; clearInterval(R.timer); R.dur = (Date.now()-R.t0)/1000;
+  try{ R.mr.stop(); }catch(e){}
+  setRecUI(false); $('recBtn').disabled = true; $('recLabel').textContent = 'ほぞん中…';
+}
+function finishRec(){
+  var mr = R.mr, chunks = R.chunks; R.mr = null; R.chunks = [];
+  var type = ((mr && mr.mimeType) || (chunks[0] && chunks[0].type) || 'video/mp4').split(';')[0];
+  var blob = new Blob(chunks, {type:type}); var meta = R.meta; meta.dur = R.dur; meta.mime = type; meta.size = blob.size;
+  if(R.releaseAfter){ R.releaseAfter = false; releaseCam(); }
+  function done(){ if(cur.view==='rec'){ $('recLabel').textContent = 'とる'; $('recBtn').disabled = !streamLive(); checkSpace(); } }
+  if(!blob.size){ toast('うまく とれませんでした'); done(); return; }
+  putVideo(meta, blob).then(function(){ toast((R.stopMsg ? R.stopMsg+'。' : '') + 'どうがを ほぞんしました'); done(); })
+    .catch(function(){ toast('ほぞん できませんでした（いっぱいかも）'); done(); });
+}
+$('recBtn').addEventListener('click', function(){ if(recording()) stopRec(); else startRec(); });
+document.addEventListener('visibilitychange', function(){ if(document.hidden && recording()) stopRec('とちゅうで とまりました'); });
+$('vidFile').addEventListener('change', function(){
+  var f = $('vidFile').files[0]; $('vidFile').value = ''; if(!f) return;
+  var meta = snapshotMeta('file'); meta.mime = f.type || 'video/mp4'; meta.size = f.size;
+  var v = document.createElement('video'), url = URL.createObjectURL(f), fin = false;
+  function go(){ if(fin) return; fin = true; URL.revokeObjectURL(url);
+    putVideo(meta, f).then(function(){ toast('どうがを 入れました'); checkSpace(); }).catch(function(){ toast('入れられませんでした（いっぱいかも）'); }); }
+  v.preload = 'metadata'; v.muted = true;
+  v.onloadedmetadata = function(){ if(isFinite(v.duration)) meta.dur = v.duration; go(); };
+  v.onerror = go; setTimeout(go, 4000); v.src = url;
+});
+$('goRec').addEventListener('click', function(){ show('rec'); });
+$('goVids').addEventListener('click', function(){ show('vids'); });
+$('recToVids').addEventListener('click', function(){ show('vids'); });
+
+/* ---------- review videos ---------- */
+var RATES = [[0.25,'とても ゆっくり','×0.25'],[0.5,'ゆっくり','×0.5'],[1,'ふつう','×1'],[2,'はやい','×2'],[4,'とても はやい','×4']];
+var V = {list:[], sel:null, blob:null, url:null, rate:1};
+function applyRate(){ var p = $('player'); p.defaultPlaybackRate = V.rate; p.playbackRate = V.rate; }
+function renderRates(){
+  var box = $('rateRow'); box.textContent = '';
+  RATES.forEach(function(r){
+    var b = el('button',{class:'btn'+(V.rate===r[0]?' on':''), type:'button', 'aria-pressed':String(V.rate===r[0])});
+    b.appendChild(el('span',{}, (V.rate===r[0]?'✓ ':'')+r[1])); b.appendChild(el('small',{style:'font-weight:400'}, r[2]));
+    b.addEventListener('click', function(){ V.rate = r[0]; applyRate(); renderRates(); });
+    box.appendChild(b);
+  });
+}
+$('player').addEventListener('loadedmetadata', applyRate);
+$('player').addEventListener('play', function(){ if($('player').playbackRate !== V.rate) applyRate(); });
+function clearPlayer(){
+  var p = $('player'); p.pause(); p.removeAttribute('src'); try{ p.load(); }catch(e){}
+  if(V.url){ URL.revokeObjectURL(V.url); V.url = null; }
+  V.blob = null; V.sel = null; $('vidInfo').hidden = true; $('playerMsg').hidden = false; $('vidMsg').textContent = '';
+}
+function leaveVids(){ clearPlayer(); }
+function enterVids(){ renderRates(); clearPlayer(); $('playerMsg').textContent = '右の 一らんから えらんでね'; loadVidList(); }
+function loadVidList(){
+  var box = $('vidList');
+  return listVideos(cur.teamId).then(function(l){
+    V.list = l.sort(function(a,b){ return a.at < b.at ? 1 : -1; }); renderVidList();
+  }).catch(function(){ box.textContent = ''; box.appendChild(el('p',{class:'msg err'},'どうがを よみだせませんでした')); });
+}
+function renderVidList(){
+  var box = $('vidList'); box.textContent = '';
+  if(!V.list.length){ box.appendChild(el('p',{class:'msg'},'まだ どうがは ありません。さくせんボードの「どうがを とる」から とってね。')); return; }
+  V.list.forEach(function(r){
+    var it = el('div',{class:'vid-item'+(V.sel && V.sel.id===r.id ? ' sel' : '')});
+    var pick = el('button',{class:'grow', type:'button', 'aria-pressed':String(!!(V.sel && V.sel.id===r.id))});
+    pick.appendChild(el('b',{}, dayLabel(r.date)+' '+r.period+'時間目'));
+    pick.appendChild(el('span',{}, planLabel(r)+'・'+mmss(r.dur)));
+    pick.addEventListener('click', function(){ selectVid(r); });
+    var del = el('button',{class:'btn ghost', type:'button'}, 'けす'); var armed = false;
+    del.addEventListener('click', function(){
+      if(!armed){ armed = true; del.textContent = 'もう一ど おすと けす'; setTimeout(function(){ armed = false; del.textContent = 'けす'; }, 3000); return; }
+      if(V.sel && V.sel.id===r.id) clearPlayer();
+      delVideo(r.id).then(function(){ toast('けしました'); loadVidList(); }).catch(function(){ toast('けせませんでした'); });
+    });
+    it.appendChild(pick); it.appendChild(del); box.appendChild(it);
+  });
+}
+function selectVid(r){
+  getVideoBlob(r.id).then(function(blob){
+    if(cur.view !== 'vids') return;
+    clearPlayer(); V.sel = r; V.blob = blob; V.url = URL.createObjectURL(blob);
+    var p = $('player'); p.src = V.url; applyRate(); $('playerMsg').hidden = true;
+    metaRows($('vidMeta'), [['日にち', dayLabel(r.date)+' '+r.period+'時間目'], ['さくせん', planLabel(r)], ['ながさ', mmss(r.dur)]]);
+    $('vidInfo').hidden = false; renderVidList();
+  }).catch(function(){ toast('この どうがを ひらけませんでした'); });
+}
+function vidFileName(r){
+  var ext = /webm/.test(r.mime) ? '.webm' : /quicktime/.test(r.mime) ? '.mov' : '.mp4';
+  var plan = r.origName ? r.origName : (r.card && cardById(r.card) ? cardById(r.card).name : 'カードなし');
+  return ['タグラグビー', r.teamName||'', r.date.replace(/-/g,''), r.period+'時間目', plan].join('_').replace(/[\\\/:*?"<>|\s]+/g,'_') + ext;
+}
+$('vidExport').addEventListener('click', function(){
+  var r = V.sel, blob = V.blob; if(!r || !blob) return;
+  var fn = vidFileName(r), type = r.mime || blob.type || 'video/mp4', file = null;
+  try{ file = new File([blob], fn, {type:type}); }catch(e){}
+  function dl(){ $('vidMsg').textContent = saveFile(fn, blob, type) ? '「'+fn+'」を ほぞんしました（ファイルAppの「ダウンロード」）。' : 'ほぞん できませんでした。'; }
+  // 共有シートを出す（iPadでは「ビデオを保存」で しゃしんAppに 入る）。ユーザーの操作の中で すぐに よぶ。
+  if(file && navigator.canShare && navigator.share && navigator.canShare({files:[file]})){
+    navigator.share({files:[file]}).then(function(){ $('vidMsg').textContent = 'ほぞん しました。'; })
+      .catch(function(e){ if(e && e.name==='AbortError') $('vidMsg').textContent = 'やめました。'; else dl(); });
+    return;
+  }
+  dl();
+});
+
+/* teacher: videos */
+function renderVidStat(){
+  var s = $('vidStat'); s.textContent = 'しらべています…';
+  listVideos(null).then(function(l){
+    var size = l.reduce(function(a,r){ return a + (r.size||0); }, 0);
+    s.textContent = l.length ? 'この端末に '+l.length+'本（'+(size<1e6?'':'約')+mb(size)+'）あります。' : 'この端末に 動画は ありません。';
+    if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(function(e){ if(e.quota) s.textContent += ' 使える残りの容量：約'+mb(e.quota-(e.usage||0)); }).catch(function(){});
+  }).catch(function(){ s.textContent = '動画の保存場所を開けませんでした（このブラウザでは動画を保存できないかもしれません）。'; });
+}
+(function(){
+  var bt = $('vidWipe'), armed = false, tm;
+  bt.addEventListener('click', function(){
+    if(!armed){ armed = true; bt.textContent = 'もう一度おすと すべて消えます'; tm = setTimeout(function(){ armed = false; bt.textContent = '動画をすべて消す'; }, 4000); return; }
+    clearTimeout(tm); armed = false; bt.textContent = '動画をすべて消す';
+    wipeVideos().then(function(){ toast('動画をすべて消しました'); renderVidStat(); }).catch(function(){ toast('消せませんでした'); });
+  });
+})();
 
 /* ---------- boot ---------- */
 setupPen($('boardCourt'));
