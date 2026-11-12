@@ -147,6 +147,8 @@ td select{min-height:40px}
   padding:10px 18px;border-radius:12px;font-weight:700;z-index:50}
 .photo-help ol,.photo-help ul{margin:6px 0;padding-left:1.3em}
 .photo-help li{margin:4px 0}
+.team-tools{margin-top:4px}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
 .next-step{border:3px solid var(--warm);border-radius:12px;padding:10px 14px;background:var(--surface-2);font-weight:700;line-height:1.6}
 .next-step .msg{font-weight:400;color:var(--fg)}
 #reviewGroup.flash{outline:4px solid var(--warm);outline-offset:3px}
@@ -573,9 +575,18 @@ td select{min-height:40px}
     <div class="group" style="margin-top:16px" id="reviewGroup">
       <div class="next-step" id="draftNote" hidden></div>
       <div class="row"><h2>チームと メンバーの 確認</h2><span class="spacer" style="flex:1"></span>
-        <button class="btn" type="button" id="addMember">メンバーを足す</button>
+        <button class="btn" type="button" id="addTeam">＋ チームを足す</button>
+        <button class="btn" type="button" id="addMember">＋ メンバーを足す</button>
         <button class="btn primary" type="button" id="saveRoster">この名簿で保存する</button></div>
-      <div id="teamEdit" class="row"></div>
+      <div class="row team-tools">
+        <label for="teamCount" class="msg">チームの数</label>
+        <select id="teamCount" style="width:auto"></select>
+        <button class="btn" type="button" id="setTeamCount">この数に する</button>
+        <span class="spacer" style="flex:1"></span>
+        <button class="btn" type="button" id="dealTeams">番号じゅんに チームに 分ける</button>
+      </div>
+      <p class="msg" id="teamToolMsg">チーム名は、下の それぞれの らんに 入力できます。メンバーの チームは、表の いちばん右で えらびます。</p>
+      <div id="teamEdit" class="team-grid"></div>
       <div class="table-wrap"><table>
         <thead><tr><th style="width:70px">番号</th><th>名字</th><th>名前</th><th style="width:170px">チーム</th><th style="width:70px"></th></tr></thead>
         <tbody id="memberRows"></tbody>
@@ -1198,18 +1209,27 @@ function renderTeacher(){
 }
 function renderDraft(){
   var d = cur.draft; var te = $('teamEdit'); te.textContent = '';
+  if(!d.teams.length) newTeam(d);
+  renderTeamCount();
   d.teams.forEach(function(t, i){
-    var g = el('div',{class:'group',style:'flex:1 1 260px;min-width:0'});
+    var g = el('div',{class:'group',style:'min-width:0'});
     var r = el('div',{class:'row'});
     var dot = el('span',{class:'dot'}); dot.style.background = t.color; r.appendChild(dot);
-    var nm = el('input',{type:'text',id:'tn'+i,'aria-label':'チーム名',style:'flex:1;min-width:0;min-height:44px;border:1.5px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--surface)'}); nm.value = t.name;
+    var nm = el('input',{type:'text',id:'tn'+i,'aria-label':'チーム名',placeholder:'チーム名を 入れる',maxlength:'12',style:'flex:1;min-width:0;min-height:44px;border:1.5px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--surface)'}); nm.value = t.name;
     nm.addEventListener('input', function(){ t.name = nm.value; refreshTeamSelects(); }); r.appendChild(nm);
     var cs = el('select',{id:'tc'+i,'aria-label':'チームの色',style:'width:auto'});
     TEAM_COLORS.forEach(function(c){ var o = el('option',{value:c[1]}, c[0]); if(c[1]===t.color) o.selected = true; cs.appendChild(o); });
     cs.addEventListener('change', function(){ t.color = cs.value; dot.style.background = cs.value; }); r.appendChild(cs);
     g.appendChild(r);
     var cnt = d.members.filter(function(m){ return m.team===t.id; }).length;
-    g.appendChild(el('span',{class:'msg'}, cnt+'人'));
+    var r2 = el('div',{class:'row'}); r2.appendChild(el('span',{class:'msg',style:'flex:1'}, cnt ? cnt+'人' : '0人（メンバーが いないと 保存されません）'));
+    var del = el('button',{class:'btn ghost',type:'button','aria-label':(t.name||'チーム')+' を 消す'}, 'チームを 消す'), armed = false;
+    del.addEventListener('click', function(){
+      if(d.teams.length <= 1){ $('teamToolMsg').textContent = 'チームは 1つ 以上 ひつようです。'; return; }
+      if(!armed){ armed = true; del.textContent = cnt ? 'もう一度おすと 消す（'+cnt+'人は 1つめの チームへ）' : 'もう一度おすと 消す'; setTimeout(function(){ armed = false; del.textContent = 'チームを 消す'; }, 3000); return; }
+      d.teams.splice(i, 1); var to = d.teams[0].id; d.members.forEach(function(m){ if(m.team===t.id) m.team = to; }); renderDraft();
+    });
+    r2.appendChild(del); g.appendChild(r2);
     te.appendChild(g);
   });
   var tb = $('memberRows'); tb.textContent = '';
@@ -1221,6 +1241,40 @@ function renderDraft(){
     tb.appendChild(tr);
   });
 }
+function newTeam(d){
+  var used = d.teams.map(function(t){ return t.color; });
+  var c = TEAM_COLORS.filter(function(x){ return used.indexOf(x[1]) < 0; })[0] || TEAM_COLORS[d.teams.length % TEAM_COLORS.length];
+  var n = d.teams.length + 1, names = d.teams.map(function(t){ return t.name; });
+  while(names.indexOf('チーム'+n) >= 0) n++;
+  var t = {id:'t'+Date.now()+'_'+d.teams.length, name:'チーム'+n, color:c[1]}; d.teams.push(t); return t;
+}
+function noteDone(){ $('draftNote').hidden = true; }
+function renderTeamCount(){ var s = $('teamCount'), n = cur.draft.teams.length; s.textContent = '';
+  for(var i=1;i<=8;i++){ var o = el('option',{value:String(i)}, i+'チーム'); if(i===Math.min(Math.max(n,1),8)) o.selected = true; s.appendChild(o); } }
+$('addTeam').addEventListener('click', function(){
+  noteDone(); var t = newTeam(cur.draft); renderDraft();
+  var inp = $('tn'+(cur.draft.teams.length-1)); if(inp){ inp.focus(); inp.select(); }
+  $('teamToolMsg').textContent = '「'+t.name+'」を足しました。チーム名を 入れて、表の いちばん右で メンバーの チームを えらんでください。';
+});
+$('setTeamCount').addEventListener('click', function(){
+  noteDone(); var d = cur.draft, want = +$('teamCount').value, msg = '';
+  while(d.teams.length < want) newTeam(d);
+  if(d.teams.length > want){
+    // うしろから、メンバーの いない チームだけ 消す
+    for(var i=d.teams.length-1; i>=0 && d.teams.length>want; i--){ var id = d.teams[i].id; if(!d.members.some(function(m){ return m.team===id; })) d.teams.splice(i,1); }
+    if(d.teams.length > want) msg = 'メンバーの いる チームは 消せないので、'+d.teams.length+'チームに なりました。先に メンバーを うつすか「チームを 消す」を つかってください。';
+  }
+  renderDraft(); $('teamToolMsg').textContent = msg || d.teams.length+'チームに しました。チーム名を 入れてください。「番号じゅんに チームに 分ける」で、全員を じゅんばんに ふり分けることも できます。';
+});
+(function(){ var bt = $('dealTeams'), armed = false;
+  bt.addEventListener('click', function(){
+    var d = cur.draft; if(!d.members.length){ $('teamToolMsg').textContent = 'メンバーが いません。'; return; }
+    if(!armed){ armed = true; bt.textContent = 'もう一度おすと 分ける（今の チーム分けは 上がき）'; setTimeout(function(){ armed = false; bt.textContent = '番号じゅんに チームに 分ける'; }, 4000); return; }
+    armed = false; bt.textContent = '番号じゅんに チームに 分ける'; noteDone();
+    var list = d.members.slice().sort(function(a,b){ return (+a.no||0)-(+b.no||0); });
+    list.forEach(function(m, k){ m.team = d.teams[k % d.teams.length].id; });
+    renderDraft(); $('teamToolMsg').textContent = '番号じゅんに '+d.teams.length+'チームへ ふり分けました（1ばん→'+(d.teams[0].name||'1つめ')+'、2ばん→'+((d.teams[1]||d.teams[0]).name)+' …）。表で 直せます。';
+  }); })();
 function fillTeamSelect(sel, val){ sel.textContent=''; cur.draft.teams.forEach(function(t){ var o = el('option',{value:t.id}, t.name||'（名前なし）'); if(t.id===val) o.selected = true; sel.appendChild(o); }); }
 function refreshTeamSelects(){ document.querySelectorAll('.team-sel').forEach(function(s){ fillTeamSelect(s, s.value); }); }
 $('addMember').addEventListener('click', function(){ var d = cur.draft; if(!d.teams.length) d.teams.push({id:'t'+Date.now(), name:'チーム1', color:TEAM_COLORS[0][1]}); var maxNo = d.members.reduce(function(a,m){ return Math.max(a, +m.no||0); },0); d.members.push({id:'m'+Date.now(), no:maxNo+1, sei:'', mei:'', team:d.teams[0].id}); renderDraft(); });
@@ -1334,13 +1388,14 @@ $('saveRoster').addEventListener('click', function(){
   var d = cur.draft; var teams = d.teams.map(function(t){ return {id:t.id, name:t.name.trim()||'チーム', color:t.color, members:[]}; });
   var idx = {}; teams.forEach(function(t){ idx[t.id] = t; });
   d.members.forEach(function(m){ if(!(m.sei||m.mei)) return; var t = idx[m.team]; if(t) t.members.push({id:m.id, no:m.no, sei:(m.sei||'').trim(), mei:(m.mei||'').trim()}); });
+  var dropped = teams.filter(function(t){ return !t.members.length; }).map(function(t){ return t.name; });
   teams = teams.filter(function(t){ return t.members.length; });
   teams.forEach(function(t){ t.members.sort(function(a,b){ return (+a.no||0)-(+b.no||0); }); });
   if(!teams.length){ $('rosterMsg').textContent = 'メンバーがいないので保存できません。'; return; }
   S.roster = {teams:teams}; S.settings.sample = false;
   Object.keys(S.boards).forEach(function(k){ if(!idx[k]) delete S.boards[k]; });
   save(); draftFromRoster(); renderDraft(); $('sampleFlag').hidden = true; $('draftNote').hidden = true;
-  $('rosterMsg').textContent = teams.length+'チーム・'+teams.reduce(function(a,t){ return a+t.members.length; },0)+'人で保存しました。'; toast('名簿を保存しました');
+  $('rosterMsg').textContent = teams.length+'チーム・'+teams.reduce(function(a,t){ return a+t.members.length; },0)+'人で保存しました。' + (dropped.length ? '（メンバーの いない「'+dropped.join('」「')+'」は 保存していません）' : ''); toast('名簿を保存しました');
 });
 document.querySelectorAll('input[name="nameMode"]').forEach(function(r){ r.addEventListener('change', function(){ S.settings.nameMode = r.value; save(); toast(r.value==='sei' ? '名字だけで表示します' : '本名で表示します'); }); });
 
