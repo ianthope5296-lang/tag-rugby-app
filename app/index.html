@@ -145,6 +145,8 @@ td select{min-height:40px}
 .msg.err{color:var(--danger)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);
   padding:10px 18px;border-radius:12px;font-weight:700;z-index:50}
+.photo-help ol,.photo-help ul{margin:6px 0;padding-left:1.3em}
+.photo-help li{margin:4px 0}
 .radio{display:flex;gap:16px;flex-wrap:wrap}
 .radio label{display:flex;gap:6px;align-items:center;min-height:44px}
 /* record / videos */
@@ -504,12 +506,29 @@ td select{min-height:40px}
     <div class="tgrid">
       <div class="group">
         <h2>名簿の登録</h2>
-        <p class="msg">Excelで「番号・名字・名前・チーム」の4列をえらんでコピーし、下に貼り付けます。CSVファイルも読み込めます。1行目が見出しでも大丈夫です。</p>
+        <p class="msg">Excelで「番号・名字・名前・チーム」の4列をえらんでコピーし、下に貼り付けます。CSVファイルや、紙・画面の写真からも読み込めます。1行目が見出しでも大丈夫です。</p>
         <textarea id="rosterIn" placeholder="1&#9;青木&#9;はると&#9;いなずま&#10;2&#9;石田&#9;ゆい&#9;いなずま"></textarea>
         <div class="row">
           <button class="btn primary" type="button" id="parseRoster">読み取る</button>
           <label class="btn" for="csvIn">CSVファイルを えらぶ</label>
           <input id="csvIn" type="file" accept=".csv,.txt,text/csv,text/plain" hidden>
+          <button class="btn" type="button" id="photoHelpBtn" aria-expanded="false" aria-controls="photoHelp">📷 写真から読み取る</button>
+        </div>
+        <div class="note photo-help" id="photoHelp" hidden>
+          <b>紙やパソコンの画面の名簿を、iPadの文字の読み取り機能で取りこみます。</b>読み取りはiPadの中で行われ、写真も名前もどこにも送られません。
+          <ol>
+            <li><b>その場で撮る：</b>上の入力らんを1回タップ → 出てきたメニューの「<b>テキストをスキャン</b>」（四角の中に文字のマーク）をおす → 名簿にカメラを向け、文字が黄色の枠で読み取れたら「<b>入力</b>」。</li>
+            <li><b>撮った写真から：</b>「写真」Appで写真を開く → 右下の「<b>テキスト認識表示</b>」のマークをおす → 文字を長おしして「<b>すべてを選択</b>」→「<b>コピー</b>」→ 上の入力らんに貼り付け。</li>
+            <li>「<b>読み取る</b>」をおし、下の表で名前・チームのまちがいを直してから「この名簿で保存する」。</li>
+          </ol>
+          <b>うまく読むコツ</b>
+          <ul>
+            <li>「番号・名字・名前・チーム」の順に並んだ表を、まっすぐ・明るく撮る。</li>
+            <li>チームごとに分かれた名簿なら、チーム名の行もいっしょに読み取る（チーム名の下の人が、そのチームになります）。</li>
+            <li>表が大きくて列の順がくずれるときは、1チームずつ、または数人ずつ読み取って、入力らんに続けて足していく。</li>
+            <li>「テキストをスキャン」が出ないときは、iPadの「設定」→「一般」→「言語と地域」→「テキスト認識表示」をオンにする。</li>
+          </ul>
+          <button class="btn" type="button" id="photoFocus">入力らんへ</button>
         </div>
         <p class="msg" id="parseMsg"></p>
       </div>
@@ -1202,36 +1221,86 @@ function fillTeamSelect(sel, val){ sel.textContent=''; cur.draft.teams.forEach(f
 function refreshTeamSelects(){ document.querySelectorAll('.team-sel').forEach(function(s){ fillTeamSelect(s, s.value); }); }
 $('addMember').addEventListener('click', function(){ var d = cur.draft; if(!d.teams.length) d.teams.push({id:'t'+Date.now(), name:'チーム1', color:TEAM_COLORS[0][1]}); var maxNo = d.members.reduce(function(a,m){ return Math.max(a, +m.no||0); },0); d.members.push({id:'m'+Date.now(), no:maxNo+1, sei:'', mei:'', team:d.teams[0].id}); renderDraft(); });
 
+/* 名簿の文字を 行と列に わける。タブ（Excel）→ カンマ（CSV）→ 空白（写真から 読み取った 文字）の じゅんに ためす */
+function normLine(line){
+  return line.replace(/[０-９]/g, function(c){ return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
+    .replace(/　/g, ' ').replace(/[，]/g, ',').replace(/^[\s・●○◯■□\-–—*]+/, '').trim();
+}
 function splitRow(line){
-  if(line.indexOf('\t')>=0) return line.split('\t').map(function(s){ return s.trim(); });
-  var out = [], curS = '', q = false;
-  for(var i=0;i<line.length;i++){ var ch = line[i];
-    if(q){ if(ch==='"'){ if(line[i+1]==='"'){ curS+='"'; i++; } else q = false; } else curS += ch; }
-    else if(ch==='"') q = true; else if(ch===','){ out.push(curS.trim()); curS=''; } else curS += ch; }
-  out.push(curS.trim()); return out;
+  if(line.indexOf('\t')>=0) return line.split('\t').map(function(s){ return s.trim(); }).filter(function(s, i, a){ return s || i < a.length-1; });
+  if(line.indexOf(',')>=0){
+    var out = [], curS = '', q = false;
+    for(var i=0;i<line.length;i++){ var ch = line[i];
+      if(q){ if(ch==='"'){ if(line[i+1]==='"'){ curS+='"'; i++; } else q = false; } else curS += ch; }
+      else if(ch==='"') q = true; else if(ch===','){ out.push(curS.trim()); curS=''; } else curS += ch; }
+    out.push(curS.trim()); return out;
+  }
+  return line.split(/\s+/).filter(Boolean);
+}
+var HEAD_WORD = /^(番号|出席番号|番|No\.?|名字|姓|氏|名前|名|氏名|ふりがな|チーム|チーム名|班)$/i;
+/* 「1番青木」「1.青木」の ような、番号と 名前が くっついた ものを わける */
+function splitNo(cells){
+  var m = cells[0] && cells[0].match(/^(\d{1,3})\s*(?:番|\.|．|:|：|\)|）)?(.*)$/);
+  if(!m) return cells;
+  return [m[1]].concat(m[2] ? [m[2]] : [], cells.slice(1));
+}
+/* 「青木はると」を「青木」「はると」に（漢字の あとに ひらがな・カタカナが つづく ときだけ） */
+function splitFused(t){
+  var m = t.match(/^([一-鿿々々]+)([ぁ-ゟ゠-ヿ]+)$/);
+  return m ? [m[1], m[2]] : [t, ''];
+}
+function teamHeader(cells, raw){
+  if(cells.length !== 1) return null;
+  var t = cells[0];
+  var m = raw.match(/^(?:チーム|チーム名|班)\s*[:：]?\s*(.+)$/) || t.match(/^[【「『\[(（]?(.+?)[】」』\])）]?\s*(?:チーム|ちーむ)?[:：]?$/);
+  return m ? m[1].trim() : t;
 }
 function parseRoster(text){
-  var lines = text.replace(/\r/g,'').split('\n').filter(function(l){ return l.trim(); });
+  var lines = text.replace(/\r/g,'').split('\n').map(function(l){ return {raw:normLine(l)}; }).filter(function(l){ return l.raw; });
+  lines.forEach(function(l){ l.cells = splitNo(splitRow(l.raw)).filter(function(c){ return c !== ''; }); });
+  // 名簿では ない 行（見出し・学年と組・日づけ）を とばす
+  lines = lines.filter(function(l){
+    if(l.cells.every(function(c){ return HEAD_WORD.test(c); })) return false;
+    if(/名簿|令和|平成|\d+\s*月\s*\d+\s*日|\d+\s*年\s*\d*\s*組/.test(l.raw)) return false;
+    if(l.cells.length === 1 && /^\d+$/.test(l.cells[0])) return false;
+    return true;
+  });
   if(!lines.length) return null;
-  var rows = lines.map(splitRow);
-  var h = rows[0].join(' ');
-  if(/番号|名字|姓|名前|チーム|氏名/.test(h)) rows.shift();
-  var teams = [], byName = {}, members = [];
-  rows.forEach(function(r, i){
-    if(r.length < 2) return;
-    var no = r[0], sei = r[1]||'', mei = r[2]||'', tn = r[3]||'チーム1';
-    if(r.length===3 && /^\d+$/.test(r[0])===false){ sei = r[0]; mei = r[1]; tn = r[2]; no = i+1; }
-    if(!sei && !mei) return;
-    if(!byName[tn]){ var c = TEAM_COLORS[teams.length % TEAM_COLORS.length][1]; byName[tn] = {id:'t'+Date.now()+teams.length, name:tn, color:c}; teams.push(byName[tn]); }
-    members.push({id:'m'+Date.now()+'_'+i, no:(+no||i+1), sei:sei, mei:mei, team:byName[tn].id});
+  // さいごの 列に 何回も 出てくる ことばは チーム名と みなす
+  var lastCount = {};
+  lines.forEach(function(l){ if(l.cells.length >= 2){ var t = l.cells[l.cells.length-1]; lastCount[t] = (lastCount[t]||0) + 1; } });
+  var allSingle = lines.every(function(l){ return l.cells.length === 1; });
+  var teams = [], byName = {}, members = [], curTeam = null, seq = 0;
+  function teamId(tn){ if(!byName[tn]){ var c = TEAM_COLORS[teams.length % TEAM_COLORS.length][1]; byName[tn] = {id:'t'+Date.now()+teams.length, name:tn, color:c}; teams.push(byName[tn]); } return byName[tn].id; }
+  lines.forEach(function(l, i){
+    var c = l.cells.slice();
+    var forced = /チーム|ちーむ|班|[:：]$|^[【「『]/.test(l.raw);
+    // 1つだけの 行は チーム名。ただし「青木はると」の ような 名前の 形なら 名前として あつかう
+    if(c.length === 1 && !allSingle && (forced || (lines[i+1] && lines[i+1].cells.length >= 2 && !splitFused(c[0])[1]))){ curTeam = teamHeader(c, l.raw); return; }
+    var no = null; if(/^\d{1,3}$/.test(c[0])) no = +c.shift();
+    if(!c.length) return;
+    var tn = null;
+    if(c.length >= 3) tn = c.pop();
+    else if(c.length === 2 && !curTeam && lastCount[c[1]] >= 2) tn = c.pop();
+    var sei = c[0], mei = c[1] || '';
+    if(c.length === 1){ var f = splitFused(sei); sei = f[0]; mei = f[1]; }
+    tn = tn || curTeam || 'チーム1';
+    seq++;
+    members.push({id:'m'+Date.now()+'_'+i, no:(no || seq), sei:sei, mei:mei, team:teamId(tn)});
   });
   return members.length ? {teams:teams, members:members} : null;
 }
+$('photoHelpBtn').addEventListener('click', function(){ var h = $('photoHelp'); h.hidden = !h.hidden; $('photoHelpBtn').setAttribute('aria-expanded', String(!h.hidden)); });
+$('photoFocus').addEventListener('click', function(){ var t = $('rosterIn'); t.scrollIntoView({block:'center'}); t.focus(); });
 $('rosterIn').addEventListener('paste', function(){ setTimeout(function(){ $('parseMsg').textContent = '貼り付けました。「読み取る」をおしてください。'; }, 0); });
 $('parseRoster').addEventListener('click', function(){
   var r = parseRoster($('rosterIn').value);
-  if(!r){ $('parseMsg').textContent = '読み取れませんでした。「番号・名字・名前・チーム」の4列になっているか確かめてください。'; return; }
-  cur.draft = r; renderDraft(); $('parseMsg').textContent = r.teams.length+'チーム・'+r.members.length+'人を読み取りました。下の表で確かめて「この名簿で保存する」をおしてください。';
+  if(!r){ $('parseMsg').textContent = '読み取れませんでした。「番号・名字・名前・チーム」の順になっているか確かめてください。'; return; }
+  cur.draft = r; renderDraft();
+  var noMei = r.members.filter(function(m){ return !m.mei; }).length;
+  $('parseMsg').textContent = r.teams.length+'チーム・'+r.members.length+'人を読み取りました。下の表で確かめて「この名簿で保存する」をおしてください。' +
+    (noMei ? '（名字と名前が分かれていない人が'+noMei+'人います。表で直してください。）' : '') +
+    (r.teams.length===1 && r.teams[0].name==='チーム1' ? '（チームが読み取れなかったので、全員「チーム1」にしました。表で直してください。）' : '');
 });
 $('csvIn').addEventListener('change', function(){
   var f = $('csvIn').files[0]; if(!f) return; var rd = new FileReader();
