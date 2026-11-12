@@ -147,6 +147,9 @@ td select{min-height:40px}
   padding:10px 18px;border-radius:12px;font-weight:700;z-index:50}
 .photo-help ol,.photo-help ul{margin:6px 0;padding-left:1.3em}
 .photo-help li{margin:4px 0}
+.next-step{border:3px solid var(--warm);border-radius:12px;padding:10px 14px;background:var(--surface-2);font-weight:700;line-height:1.6}
+.next-step .msg{font-weight:400;color:var(--fg)}
+#reviewGroup.flash{outline:4px solid var(--warm);outline-offset:3px}
 .radio{display:flex;gap:16px;flex-wrap:wrap}
 .radio label{display:flex;gap:6px;align-items:center;min-height:44px}
 /* record / videos */
@@ -519,7 +522,7 @@ td select{min-height:40px}
           <ol>
             <li><b>その場で撮る：</b>上の入力らんを1回タップ → 出てきたメニューの「<b>テキストをスキャン</b>」（四角の中に文字のマーク）をおす → 名簿にカメラを向け、文字が黄色の枠で読み取れたら「<b>入力</b>」。</li>
             <li><b>撮った写真から：</b>「写真」Appで写真を開く → 右下の「<b>テキスト認識表示</b>」のマークをおす → 文字を長おしして「<b>すべてを選択</b>」→「<b>コピー</b>」→ 上の入力らんに貼り付け。</li>
-            <li>「<b>読み取る</b>」をおし、下の表で名前・チームのまちがいを直してから「この名簿で保存する」。</li>
+            <li>文字が入ると<b>自動で読み取り</b>、画面の下の「チームと メンバーの 確認」の表に出ます（出ないときは「読み取る」をおす）。表で名前・チームのまちがいを直してから「この名簿で保存する」。</li>
           </ol>
           <b>うまく読むコツ</b>
           <ul>
@@ -567,7 +570,8 @@ td select{min-height:40px}
         <p class="msg" id="pinSaveMsg"></p>
       </div>
     </div>
-    <div class="group" style="margin-top:16px">
+    <div class="group" style="margin-top:16px" id="reviewGroup">
+      <div class="next-step" id="draftNote" hidden></div>
       <div class="row"><h2>チームと メンバーの 確認</h2><span class="spacer" style="flex:1"></span>
         <button class="btn" type="button" id="addMember">メンバーを足す</button>
         <button class="btn primary" type="button" id="saveRoster">この名簿で保存する</button></div>
@@ -1292,16 +1296,34 @@ function parseRoster(text){
 }
 $('photoHelpBtn').addEventListener('click', function(){ var h = $('photoHelp'); h.hidden = !h.hidden; $('photoHelpBtn').setAttribute('aria-expanded', String(!h.hidden)); });
 $('photoFocus').addEventListener('click', function(){ var t = $('rosterIn'); t.scrollIntoView({block:'center'}); t.focus(); });
-$('rosterIn').addEventListener('paste', function(){ setTimeout(function(){ $('parseMsg').textContent = '貼り付けました。「読み取る」をおしてください。'; }, 0); });
-$('parseRoster').addEventListener('click', function(){
-  var r = parseRoster($('rosterIn').value);
-  if(!r){ $('parseMsg').textContent = '読み取れませんでした。「番号・名字・名前・チーム」の順になっているか確かめてください。'; return; }
+/* 名簿の 文字を 読み取って、下の 確認の 表に 出す。
+   「テキストをスキャン」や 貼り付けで 文字が 入ったら、自動で 読み取る（ボタンを おさなくても よい） */
+function runParse(auto){
+  var text = $('rosterIn').value, note = $('draftNote');
+  if(!text.trim()){ if(!auto) $('parseMsg').textContent = '上の入力らんに、名簿の文字を入れてください。'; return; }
+  var r = parseRoster(text);
+  if(!r){
+    $('parseMsg').textContent = '読み取れませんでした。「番号・名字・名前・チーム」の順になっているか確かめてください。';
+    note.hidden = true; return;
+  }
   cur.draft = r; renderDraft();
   var noMei = r.members.filter(function(m){ return !m.mei; }).length;
-  $('parseMsg').textContent = r.teams.length+'チーム・'+r.members.length+'人を読み取りました。下の表で確かめて「この名簿で保存する」をおしてください。' +
-    (noMei ? '（名字と名前が分かれていない人が'+noMei+'人います。表で直してください。）' : '') +
-    (r.teams.length===1 && r.teams[0].name==='チーム1' ? '（チームが読み取れなかったので、全員「チーム1」にしました。表で直してください。）' : '');
+  var noTeam = r.teams.length===1 && r.teams[0].name==='チーム1';
+  $('parseMsg').textContent = r.teams.length+'チーム・'+r.members.length+'人を読み取りました。下の「チームと メンバーの 確認」に出ています。';
+  note.textContent = '';
+  note.appendChild(document.createTextNode('✓ '+r.teams.length+'チーム・'+r.members.length+'人を読み取りました。次に、下の表で名前とチームを確かめて、まちがいを直してから「この名簿で保存する」をおしてください。'));
+  if(noMei || noTeam){ var w = el('div',{class:'msg'}, (noMei ? '・名字と名前が分かれていない人が'+noMei+'人います（名字の らんに まとめて 入っています）。' : '') + (noTeam ? '・チームが読み取れなかったので、全員「チーム1」にしました。チームの らんで えらび直してください。' : '')); note.appendChild(w); }
+  note.hidden = false;
+  var g = $('reviewGroup'); g.scrollIntoView({behavior:'smooth', block:'start'});
+  g.classList.add('flash'); setTimeout(function(){ g.classList.remove('flash'); }, 1800);
+}
+var parseTimer = 0;
+$('rosterIn').addEventListener('input', function(){
+  clearTimeout(parseTimer);
+  $('parseMsg').textContent = '読み取っています…';
+  parseTimer = setTimeout(function(){ runParse(true); }, 1200);
 });
+$('parseRoster').addEventListener('click', function(){ clearTimeout(parseTimer); runParse(false); });
 $('csvIn').addEventListener('change', function(){
   var f = $('csvIn').files[0]; if(!f) return; var rd = new FileReader();
   rd.onload = function(){ $('rosterIn').value = String(rd.result); $('parseRoster').click(); $('csvIn').value = ''; };
@@ -1317,7 +1339,7 @@ $('saveRoster').addEventListener('click', function(){
   if(!teams.length){ $('rosterMsg').textContent = 'メンバーがいないので保存できません。'; return; }
   S.roster = {teams:teams}; S.settings.sample = false;
   Object.keys(S.boards).forEach(function(k){ if(!idx[k]) delete S.boards[k]; });
-  save(); draftFromRoster(); renderDraft(); $('sampleFlag').hidden = true;
+  save(); draftFromRoster(); renderDraft(); $('sampleFlag').hidden = true; $('draftNote').hidden = true;
   $('rosterMsg').textContent = teams.length+'チーム・'+teams.reduce(function(a,t){ return a+t.members.length; },0)+'人で保存しました。'; toast('名簿を保存しました');
 });
 document.querySelectorAll('input[name="nameMode"]').forEach(function(r){ r.addEventListener('change', function(){ S.settings.nameMode = r.value; save(); toast(r.value==='sei' ? '名字だけで表示します' : '本名で表示します'); }); });
